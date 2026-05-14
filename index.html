@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Color Matcher</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --surface: #ffffff; --text: #28251d; --muted: #7a7974;
+    --primary: #01696f; --primary-hover: #0c4e54; --border: #d4d1ca;
+    --radius: 12px; --shadow: 0 4px 16px rgba(0,0,0,0.10);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text); overflow: hidden; }
+  .screen { display: none; flex-direction: column; height: 100dvh; }
+  .screen.active { display: flex; }
+  .header { padding: 16px 20px 12px; background: var(--surface);
+    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .header p  { font-size: 13px; color: var(--muted); }
+  .back-btn  { background: none; border: none; font-size: 22px; cursor: pointer;
+    color: var(--primary); padding: 4px 8px 4px 0; }
+  #cameraWrapper { position: relative; flex: 1; background: #000; overflow: hidden; }
+  #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #captureBtn {
+    position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+    width: 72px; height: 72px; border-radius: 50%; border: 4px solid #fff;
+    background: var(--primary); cursor: pointer; box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+  }
+  #captureBtn:active { transform: translateX(-50%) scale(0.93); }
+  .cam-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; padding: 6px 14px;
+    border-radius: 20px; white-space: nowrap; }
+  #fileBtn { position: absolute; bottom: 44px; right: 28px;
+    background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px;
+    color: #fff; font-size: 12px; padding: 8px 12px; cursor: pointer; }
+  #sampleScreen { background: #111; }
+  #canvasWrapper { position: relative; flex: 1; display: flex; align-items: center;
+    justify-content: center; overflow: hidden; touch-action: none; }
+  #photoCanvas { max-width: 100%; max-height: 100%; display: block; }
+  #selectionBox { position: absolute; border: 2px dashed #fff;
+    background: rgba(255,255,255,0.12); pointer-events: none; display: none; }
+  .sample-hint { font-size: 13px; color: #ccc; text-align: center; padding: 10px 20px; }
+  #sampleActions { padding: 16px 20px; display: flex; gap: 12px; background: #1a1a1a; }
+  .btn { flex: 1; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px;
+    font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn:active { opacity: 0.8; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-ghost   { background: rgba(255,255,255,0.12); color: #fff; }
+  #resultsScreen { overflow-y: auto; }
+  .results-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .swatch-row { display: flex; gap: 16px; align-items: center; background: var(--surface);
+    border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  #sampledSwatch { width: 80px; height: 80px; border-radius: 10px; flex-shrink: 0;
+    border: 1px solid var(--border); }
+  .swatch-vals { font-size: 13px; color: var(--muted); line-height: 1.8; }
+  .swatch-vals strong { color: var(--text); font-size: 15px; }
+  .section-title { font-size: 14px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em; }
+  .paint-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .paint-card { background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; cursor: pointer;
+    border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s; }
+  .paint-card:active { transform: scale(0.97); }
+  .paint-card.selected { border-color: var(--primary); }
+  .paint-chip { height: 72px; width: 100%; }
+  .paint-info { padding: 10px 12px; }
+  .paint-brand { font-size: 10px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 2px; }
+  .paint-name  { font-size: 14px; font-weight: 600; color: var(--text); }
+  .paint-code  { font-size: 12px; color: var(--muted); }
+  .paint-de    { font-size: 11px; color: var(--primary); margin-top: 2px; }
+  #selectionBanner { display: none; background: var(--primary); color: #fff;
+    padding: 16px 20px; border-radius: var(--radius); }
+  #selectionBanner h3 { font-size: 15px; margin-bottom: 4px; }
+  #selectionBanner p  { font-size: 13px; opacity: 0.85; }
+  #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    align-items: center; justify-content: center; z-index: 99;
+    flex-direction: column; gap: 16px; }
+  #loading.show { display: flex; }
+  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loading p { color: #fff; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><p>Processing…</p></div>
+
+<!-- SCREEN 1: Camera -->
+<div class="screen active" id="cameraScreen">
+  <div class="header">
+    <div>
+      <h1>🎨 Color Matcher</h1>
+      <p>Point camera at the color you want to match</p>
+    </div>
+  </div>
+  <div id="cameraWrapper">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="cam-hint">Hold steady — good lighting helps!</div>
+    <button id="captureBtn">📷</button>
+    <button id="fileBtn">📁 Photo</button>
+  </div>
+  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+</div>
+
+<!-- SCREEN 2: Select Area -->
+<div class="screen" id="sampleScreen">
+  <div class="header" style="background:#1a1a1a; border-color:#333;">
+    <button class="back-btn" onclick="goTo('cameraScreen')">‹</button>
+    <div>
+      <h1 style="color:#fff;">Select Color Area</h1>
+      <p style="color:#888;">Drag a box over the color to sample</p>
+    </div>
+  </div>
+  <div id="canvasWrapper">
+    <canvas id="photoCanvas"></canvas>
+    <div id="selectionBox"></div>
+  </div>
+  <p class="sample-hint">Drag over a flat, evenly-lit area of the color</p>
+  <div id="sampleActions">
+    <button class="btn btn-ghost" onclick="goTo('cameraScreen')">Retake</button>
+    <button class="btn btn-primary" onclick="analyzeSelection()">Sample Color →</button>
+  </div>
+</div>
+
+<!-- SCREEN 3: Results -->
+<div class="screen" id="resultsScreen">
+  <div class="header">
+    <button class="back-btn" onclick="goTo('sampleScreen')">‹</button>
+    <div>
+      <h1>Color Matches</h1>
+      <p>Tap the closest match to your real-world color</p>
+    </div>
+  </div>
+  <div class="results-body">
+    <div class="swatch-row">
+      <div id="sampledSwatch"></div>
+      <div class="swatch-vals">
+        <strong id="swatchLabel">Sampled Color</strong><br>
+        <span id="swatchRGB"></span><br>
+        <span id="swatchLAB"></span>
+      </div>
+    </div>
+    <div class="section-title">Nearest Paint Colors — tap the closest match</div>
+    <div class="paint-grid" id="paintGrid"></div>
+    <div id="selectionBanner">
+      <h3 id="bannerName"></h3>
+      <p id="bannerDetail"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const PAINTS = [
+  {brand:"Sherwin-Williams",name:"Alabaster",code:"SW 7008",r:237,g:234,b:224,L:92.68,a:-0.72,b_lab:5.21},
+  {brand:"Sherwin-Williams",name:"Pure White",code:"SW 7005",r:242,g:240,b:234,L:94.8,a:-0.38,b_lab:3.13},
+  {brand:"Sherwin-Williams",name:"Accessible Beige",code:"SW 7036",r:211,g:203,b:186,L:81.6,a:0.52,b_lab:9.72},
+  {brand:"Sherwin-Williams",name:"Agreeable Gray",code:"SW 7029",r:209,g:203,b:193,L:81.1,a:0.21,b_lab:5.84},
+  {brand:"Sherwin-Williams",name:"Repose Gray",code:"SW 7015",r:196,g:193,b:188,L:77.4,a:0.11,b_lab:2.89},
+  {brand:"Sherwin-Williams",name:"Mindful Gray",code:"SW 7016",r:179,g:174,b:165,L:70.4,a:0.28,b_lab:4.88},
+  {brand:"Sherwin-Williams",name:"Worldly Gray",code:"SW 7043",r:196,g:191,b:180,L:76.8,a:0.31,b_lab:5.52},
+  {brand:"Sherwin-Williams",name:"Creamy",code:"SW 7012",r:237,g:228,b:207,L:90.8,a:0.12,b_lab:11.4},
+  {brand:"Sherwin-Williams",name:"Antique White",code:"SW 6119",r:234,g:225,b:207,L:89.7,a:0.38,b_lab:10.8},
+  {brand:"Sherwin-Williams",name:"Navajo White",code:"SW 6126",r:233,g:218,b:193,L:87.8,a:1.02,b_lab:14.3},
+  {brand:"Sherwin-Williams",name:"Naval",code:"SW 6244",r:52,g:73,b:94,L:29.8,a:-1.2,b_lab:-17.4},
+  {brand:"Sherwin-Williams",name:"Cyberspace",code:"SW 7076",r:55,g:60,b:65,L:24.8,a:-0.5,b_lab:-3.2},
+  {brand:"Sherwin-Williams",name:"Iron Ore",code:"SW 7069",r:74,g:72,b:67,L:30.1,a:0.4,b_lab:3.1},
+  {brand:"Sherwin-Williams",name:"Tricorn Black",code:"SW 6258",r:42,g:42,b:43,L:17.2,a:-0.1,b_lab:-0.5},
+  {brand:"Sherwin-Williams",name:"Urbane Bronze",code:"SW 7048",r:88,g:82,b:72,L:34.5,a:1.1,b_lab:6.8},
+  {brand:"Sherwin-Williams",name:"Peppercorn",code:"SW 7674",r:101,g:97,b:90,L:40.1,a:0.6,b_lab:4.7},
+  {brand:"Sherwin-Williams",name:"Pewter Green",code:"SW 6208",r:114,g:134,b:117,L:53.1,a:-7.2,b_lab:5.8},
+  {brand:"Sherwin-Williams",name:"Evergreen Fog",code:"SW 9130",r:137,g:148,b:133,L:58.9,a:-4.8,b_lab:5.2},
+  {brand:"Sherwin-Williams",name:"Sage",code:"SW 0016",r:153,g:163,b:139,L:64.4,a:-5.3,b_lab:9.8},
+  {brand:"Sherwin-Williams",name:"Rosemary",code:"SW 6187",r:88,g:108,b:84,L:42.8,a:-9.4,b_lab:8.4},
+  {brand:"Sherwin-Williams",name:"Cavern Clay",code:"SW 7701",r:188,g:120,b:93,L:54.8,a:19.4,b_lab:24.6},
+  {brand:"Sherwin-Williams",name:"Redend Point",code:"SW 9081",r:193,g:158,b:141,L:66.4,a:10.8,b_lab:13.2},
+  {brand:"Sherwin-Williams",name:"Antler Velvet",code:"SW 9174",r:168,g:140,b:115,L:59.4,a:7.8,b_lab:17.8},
+  {brand:"Sherwin-Williams",name:"Heron Plume",code:"SW 6070",r:220,g:210,b:197,L:84.2,a:1.2,b_lab:7.4},
+  {brand:"Sherwin-Williams",name:"Inviting Ivory",code:"SW 6372",r:228,g:216,b:190,L:87.0,a:0.8,b_lab:13.8},
+  {brand:"Benjamin Moore",name:"White Dove",code:"OC-17",r:242,g:240,b:232,L:94.6,a:-0.3,b_lab:3.8},
+  {brand:"Benjamin Moore",name:"Chantilly Lace",code:"OC-65",r:246,g:244,b:240,L:96.2,a:-0.2,b_lab:1.8},
+  {brand:"Benjamin Moore",name:"Simply White",code:"OC-117",r:245,g:242,b:233,L:95.6,a:-0.2,b_lab:4.1},
+  {brand:"Benjamin Moore",name:"White Heron",code:"OC-57",r:237,g:236,b:228,L:93.2,a:-0.3,b_lab:3.6},
+  {brand:"Benjamin Moore",name:"Edgecomb Gray",code:"HC-173",r:210,g:203,b:190,L:81.4,a:0.4,b_lab:7.2},
+  {brand:"Benjamin Moore",name:"Revere Pewter",code:"HC-172",r:196,g:189,b:175,L:76.2,a:0.5,b_lab:7.8},
+  {brand:"Benjamin Moore",name:"Pale Oak",code:"OC-20",r:218,g:210,b:197,L:84.0,a:0.6,b_lab:7.8},
+  {brand:"Benjamin Moore",name:"Balboa Mist",code:"OC-27",r:208,g:204,b:193,L:81.6,a:0.1,b_lab:5.8},
+  {brand:"Benjamin Moore",name:"Sea Salt",code:"CSP-95",r:180,g:207,b:199,L:81.0,a:-8.2,b_lab:1.8},
+  {brand:"Benjamin Moore",name:"Hale Navy",code:"HC-154",r:68,g:84,b:106,L:34.2,a:-1.4,b_lab:-14.8},
+  {brand:"Benjamin Moore",name:"Van Deusen Blue",code:"HC-156",r:67,g:95,b:127,L:38.6,a:-2.8,b_lab:-18.4},
+  {brand:"Benjamin Moore",name:"Kendall Charcoal",code:"HC-166",r:97,g:98,b:96,L:40.0,a:-0.2,b_lab:0.8},
+  {brand:"Benjamin Moore",name:"Black Beauty",code:"2128-10",r:31,g:29,b:30,L:11.8,a:0.4,b_lab:-0.2},
+  {brand:"Benjamin Moore",name:"Wrought Iron",code:"2124-10",r:66,g:68,b:67,L:27.4,a:-0.6,b_lab:0.4},
+  {brand:"Benjamin Moore",name:"Saybrook Sage",code:"HC-114",r:152,g:162,b:138,L:64.2,a:-5.2,b_lab:9.4},
+  {brand:"Benjamin Moore",name:"Guilford Green",code:"HC-116",r:143,g:163,b:143,L:64.4,a:-8.2,b_lab:7.4},
+  {brand:"Benjamin Moore",name:"Caldwell Green",code:"HC-124",r:93,g:118,b:84,L:46.8,a:-12.4,b_lab:12.2},
+  {brand:"Benjamin Moore",name:"Pale Blush",code:"2173-60",r:230,g:196,b:180,L:81.2,a:9.8,b_lab:11.8},
+  {brand:"Benjamin Moore",name:"Newborn",code:"2170-70",r:245,g:220,b:210,L:89.4,a:6.2,b_lab:9.4}
+];
+
+let stream = null, capturedImageData = null, displayScale = 1;
+let selection = { x:0, y:0, w:0, h:0, dragging:false, startX:0, startY:0 };
+
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'cameraScreen') startCamera();
+  if (id === 'sampleScreen') setupCanvas();
+}
+
+async function startCamera() {
+  const video = document.getElementById('video');
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width:{ideal:1920}, height:{ideal:1080} }
+    });
+    video.srcObject = stream;
+  } catch(e) { console.warn('Camera unavailable:', e); }
+}
+
+document.getElementById('captureBtn').addEventListener('click', () => {
+  const video = document.getElementById('video');
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth || 1280; c.height = video.videoHeight || 720;
+  c.getContext('2d').drawImage(video, 0, 0);
+  capturedImageData = c.toDataURL('image/jpeg', 0.95);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  goTo('sampleScreen');
+});
+
+document.getElementById('fileBtn').addEventListener('click', () =>
+  document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { capturedImageData = ev.target.result; goTo('sampleScreen'); };
+  reader.readAsDataURL(file);
+});
+
+function setupCanvas() {
+  const canvas = document.getElementById('photoCanvas');
+  const img = new Image();
+  img.onload = () => {
+    const wrapper = document.getElementById('canvasWrapper');
+    const scale = Math.min(wrapper.clientWidth/img.width, wrapper.clientHeight/img.height);
+    canvas.width = img.width; canvas.height = img.height;
+    canvas.style.width = (img.width*scale)+'px'; canvas.style.height = (img.height*scale)+'px';
+    displayScale = scale;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    selection = { x:0, y:0, w:0, h:0, dragging:false, startX:0, startY:0 };
+    document.getElementById('selectionBox').style.display = 'none';
+  };
+  img.src = capturedImageData;
+}
+
+function getPos(clientX, clientY) {
+  const r = document.getElementById('photoCanvas').getBoundingClientRect();
+  return { x:(clientX-r.left)/displayScale, y:(clientY-r.top)/displayScale };
+}
+
+function updateBox() {
+  const box = document.getElementById('selectionBox');
+  const cr = document.getElementById('photoCanvas').getBoundingClientRect();
+  const wr = document.getElementById('canvasWrapper').getBoundingClientRect();
+  box.style.display = 'block';
+  box.style.left   = (cr.left-wr.left + selection.x*displayScale)+'px';
+  box.style.top    = (cr.top -wr.top  + selection.y*displayScale)+'px';
+  box.style.width  = (selection.w*displayScale)+'px';
+  box.style.height = (selection.h*displayScale)+'px';
+}
+
+const cw = document.getElementById('canvasWrapper');
+cw.addEventListener('touchstart', e => { e.preventDefault(); const t=e.touches[0];
+  const p=getPos(t.clientX,t.clientY); selection.startX=p.x; selection.startY=p.y; selection.dragging=true; },{passive:false});
+cw.addEventListener('touchmove',  e => { e.preventDefault(); if(!selection.dragging) return;
+  const t=e.touches[0]; const p=getPos(t.clientX,t.clientY);
+  selection.x=Math.min(p.x,selection.startX); selection.y=Math.min(p.y,selection.startY);
+  selection.w=Math.abs(p.x-selection.startX); selection.h=Math.abs(p.y-selection.startY); updateBox(); },{passive:false});
+cw.addEventListener('touchend', () => { selection.dragging=false; });
+cw.addEventListener('mousedown', e => { const p=getPos(e.clientX,e.clientY);
+  selection.startX=p.x; selection.startY=p.y; selection.dragging=true; });
+cw.addEventListener('mousemove', e => { if(!selection.dragging) return;
+  const p=getPos(e.clientX,e.clientY);
+  selection.x=Math.min(p.x,selection.startX); selection.y=Math.min(p.y,selection.startY);
+  selection.w=Math.abs(p.x-selection.startX); selection.h=Math.abs(p.y-selection.startY); updateBox(); });
+cw.addEventListener('mouseup', () => { selection.dragging=false; });
+
+function rgbToLab(r,g,b) {
+  const lin = c => { c/=255; return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4); };
+  const rl=lin(r),gl=lin(g),bl=lin(b);
+  let X=rl*0.4124564+gl*0.3575761+bl*0.1804375;
+  let Y=rl*0.2126729+gl*0.7151522+bl*0.0721750;
+  let Z=rl*0.0193339+gl*0.1191920+bl*0.9503041;
+  X/=0.95047; Z/=1.08883;
+  const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;
+  return {L:116*f(Y)-16, a:500*(f(X)-f(Y)), b:200*(f(Y)-f(Z))};
+}
+
+function deltaE(l1,l2) {
+  return Math.sqrt(Math.pow(l1.L-l2.L,2)+Math.pow(l1.a-l2.a,2)+Math.pow(l1.b-l2.b,2));
+}
+
+function analyzeSelection() {
+  if (selection.w<10||selection.h<10) { alert('Please drag a larger area to sample.'); return; }
+  document.getElementById('loading').classList.add('show');
+  setTimeout(() => {
+    const canvas=document.getElementById('photoCanvas'), ctx=canvas.getContext('2d');
+    const x=Math.max(0,Math.round(selection.x)), y=Math.max(0,Math.round(selection.y));
+    const w=Math.min(canvas.width-x,Math.round(selection.w));
+    const h=Math.min(canvas.height-y,Math.round(selection.h));
+    const px=ctx.getImageData(x,y,w,h).data;
+    let rS=0,gS=0,bS=0,n=0;
+    for(let i=0;i<px.length;i+=4){rS+=px[i];gS+=px[i+1];bS+=px[i+2];n++;}
+    const r=Math.round(rS/n), g=Math.round(gS/n), b=Math.round(bS/n);
+    const lab=rgbToLab(r,g,b);
+    const matches=PAINTS.map(p=>({...p,de:deltaE(lab,{L:p.L,a:p.a,b:p.b_lab})}))
+      .sort((a,b)=>a.de-b.de).slice(0,8);
+    showResults(r,g,b,lab,matches);
+    document.getElementById('loading').classList.remove('show');
+  },50);
+}
+
+function showResults(r,g,b,lab,matches) {
+  const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  document.getElementById('sampledSwatch').style.background=hex;
+  document.getElementById('swatchLabel').textContent=hex.toUpperCase();
+  document.getElementById('swatchRGB').textContent=`RGB: ${r}, ${g}, ${b}`;
+  document.getElementById('swatchLAB').textContent=
+    `LAB: ${lab.L.toFixed(1)}, ${lab.a.toFixed(1)}, ${lab.b.toFixed(1)}`;
+  const grid=document.getElementById('paintGrid');
+  grid.innerHTML='';
+  matches.forEach(p => {
+    const ch='#'+[p.r,p.g,p.b].map(v=>v.toString(16).padStart(2,'0')).join('');
+    const card=document.createElement('div');
+    card.className='paint-card';
+    card.innerHTML=`<div class="paint-chip" style="background:${ch}"></div>
+      <div class="paint-info">
+        <div class="paint-brand">${p.brand}</div>
+        <div class="paint-name">${p.name}</div>
+        <div class="paint-code">${p.code}</div>
+        <div class="paint-de">ΔE ${p.de.toFixed(1)}</div>
+      </div>`;
+    card.addEventListener('click',()=>{
+      document.querySelectorAll('.paint-card').forEach(c=>c.classList.remove('selected'));
+      card.classList.add('selected');
+      const banner=document.getElementById('selectionBanner');
+      banner.style.display='block'; banner.style.background=ch;
+      const lum=(0.299*p.r+0.587*p.g+0.114*p.b)/255;
+      banner.style.color=lum>0.5?'#222':'#fff';
+      document.getElementById('bannerName').textContent=`✓ ${p.name} — ${p.code}`;
+      document.getElementById('bannerDetail').textContent=
+        `${p.brand} · Bring this code to the paint counter`;
+      banner.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+    grid.appendChild(card);
+  });
+  document.getElementById('selectionBanner').style.display='none';
+  goTo('resultsScreen');
+}
+
+startCamera();
+</script>
+</body>
+</html>
