@@ -4,365 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>ColorPicker</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ColorPicker">
 <style>
-  :root {
-    --bg: #f7f6f2; --surface: #ffffff; --text: #28251d; --muted: #7a7974;
-    --primary: #01696f; --primary-hover: #0c4e54; --border: #d4d1ca;
-    --radius: 12px; --shadow: 0 4px 16px rgba(0,0,0,0.10);
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg); color: var(--text); overflow: hidden; }
-  .screen { display: none; flex-direction: column; height: 100dvh; }
-  .screen.active { display: flex; }
-  .header { padding: 16px 20px 12px; background: var(--surface);
-    border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .header h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
-  .header p  { font-size: 13px; color: var(--muted); }
-  .back-btn  { background: none; border: none; font-size: 22px; cursor: pointer;
-    color: var(--primary); padding: 4px 8px 4px 0; }
-  #cameraWrapper { position: relative; flex: 1; background: #000; overflow: hidden; }
-  #video { width: 100%; height: 100%; object-fit: cover; display: block; }
-  #captureBtn {
-    position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-    width: 72px; height: 72px; border-radius: 50%; border: 4px solid #fff;
-    background: var(--primary); cursor: pointer; box-shadow: var(--shadow);
-    display: flex; align-items: center; justify-content: center; font-size: 28px;
-  }
-  #captureBtn:active { transform: translateX(-50%) scale(0.93); }
-  .cam-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-    background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; padding: 6px 14px;
-    border-radius: 20px; white-space: nowrap; }
-  #fileBtn { position: absolute; bottom: 44px; right: 28px;
-    background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px;
-    color: #fff; font-size: 12px; padding: 8px 12px; cursor: pointer; }
-  #sampleScreen { background: #111; }
-  #canvasWrapper { position: relative; flex: 1; display: flex; align-items: center;
-    justify-content: center; overflow: hidden; touch-action: none; }
-  #photoCanvas { max-width: 100%; max-height: 100%; display: block; }
-  #selectionBox { position: absolute; border: 2px dashed #fff;
-    background: rgba(255,255,255,0.12); pointer-events: none; display: none; }
-  .sample-hint { font-size: 13px; color: #ccc; text-align: center; padding: 10px 20px; }
-  #sampleActions { padding: 16px 20px; display: flex; gap: 12px; background: #1a1a1a; }
-  .btn { flex: 1; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px;
-    font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-  .btn:active { opacity: 0.8; }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-ghost   { background: rgba(255,255,255,0.12); color: #fff; }
-  #resultsScreen { overflow-y: auto; }
-  .results-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-  .swatch-row { display: flex; gap: 16px; align-items: center; background: var(--surface);
-    border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
-  #sampledSwatch { width: 80px; height: 80px; border-radius: 10px; flex-shrink: 0;
-    border: 1px solid var(--border); }
-  .swatch-vals { font-size: 13px; color: var(--muted); line-height: 1.8; }
-  .swatch-vals strong { color: var(--text); font-size: 15px; }
-  .section-title { font-size: 14px; font-weight: 700; color: var(--muted);
-    text-transform: uppercase; letter-spacing: 0.06em; }
-  .paint-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .paint-card { background: var(--surface); border-radius: var(--radius);
-    box-shadow: var(--shadow); overflow: hidden; cursor: pointer;
-    border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s; }
-  .paint-card:active { transform: scale(0.97); }
-  .paint-card.selected { border-color: var(--primary); }
-  .paint-chip { height: 72px; width: 100%; }
-  .paint-info { padding: 10px 12px; }
-  .paint-brand { font-size: 10px; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.05em; margin-bottom: 2px; }
-  .paint-name  { font-size: 14px; font-weight: 600; color: var(--text); }
-  .paint-code  { font-size: 12px; color: var(--muted); }
-  .paint-de    { font-size: 11px; color: var(--primary); margin-top: 2px; }
-  #selectionBanner { display: none; background: var(--primary); color: #fff;
-    padding: 16px 20px; border-radius: var(--radius); }
-  #selectionBanner h3 { font-size: 15px; margin-bottom: 4px; }
-  #selectionBanner p  { font-size: 13px; opacity: 0.85; }
-  #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    align-items: center; justify-content: center; z-index: 99;
-    flex-direction: column; gap: 16px; }
-  #loading.show { display: flex; }
-  .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3);
-    border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading p { color: #fff; font-size: 14px; }
+:root{--bg:#f7f6f2;--surface:#fff;--text:#28251d;--muted:#6f6d68;--primary:#01696f;--border:#d8d5ce;--radius:14px;--shadow:0 8px 24px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0} html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)} body{overflow:hidden}
+.screen{display:none;flex-direction:column;height:100dvh} .screen.active{display:flex}
+.header{padding:16px 18px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.header h1{font-size:18px;color:var(--primary)} .header p{font-size:12px;color:var(--muted)} .back-btn{border:none;background:none;font-size:24px;color:var(--primary);padding:4px 8px 4px 0}
+#cameraWrapper{position:relative;flex:1;background:#000;overflow:hidden} #video{width:100%;height:100%;object-fit:cover}
+#captureBtn{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:var(--primary);color:#fff;font-size:28px;box-shadow:var(--shadow)}
+#fileBtn{position:absolute;bottom:40px;right:20px;background:rgba(0,0,0,.45);color:#fff;border:2px solid #fff;border-radius:10px;padding:8px 12px;font-size:12px}
+.cam-hint{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:6px 12px;border-radius:999px;font-size:12px}
+#sampleScreen{background:#111} #canvasWrapper{position:relative;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none} #photoCanvas{max-width:100%;max-height:100%;display:block} #selectionBox{position:absolute;border:2px dashed #fff;background:rgba(255,255,255,.12);display:none;pointer-events:none}
+.sample-hint{font-size:12px;color:#cfcfcf;text-align:center;padding:10px 18px} #sampleActions{display:flex;gap:12px;padding:16px 18px;background:#1a1a1a} .btn{flex:1;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:600} .btn-primary{background:var(--primary);color:#fff} .btn-ghost{background:rgba(255,255,255,.12);color:#fff}
+#resultsScreen,#neighborsScreen{overflow-y:auto} .results-body{padding:18px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+.swatch-row{display:flex;gap:14px;align-items:center} #sampledSwatch,#selectedSwatch{width:84px;height:84px;border-radius:12px;border:1px solid var(--border);flex-shrink:0}
+.swatch-vals{font-size:13px;line-height:1.7;color:var(--muted)} .swatch-vals strong{font-size:15px;color:var(--text)} .section-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.paint-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px} .paint-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;border:2px solid transparent} .paint-card.selected{border-color:var(--primary)} .paint-chip{height:78px} .paint-info{padding:10px 12px} .paint-brand{font-size:10px;color:var(--muted);text-transform:uppercase} .paint-name{font-size:14px;font-weight:700} .paint-code,.paint-meta,.paint-de{font-size:12px;color:var(--muted)} .paint-de{color:var(--primary);margin-top:2px}
+#selectionBanner{display:none;padding:16px;border-radius:var(--radius)} #selectionBanner h3{font-size:15px;margin-bottom:4px} #selectionBanner p{font-size:13px;opacity:.92}
+.neighbor-row{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px;align-items:stretch} .mini-card{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--border)} .mini-chip{height:90px} .mini-info{padding:10px;font-size:12px} .mini-info strong{display:block;font-size:13px} .center-col .mini-card{border:2px solid var(--primary)}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef4f3;color:var(--primary);font-size:11px;font-weight:700}
+#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:20;flex-direction:column;gap:14px} #loading.show{display:flex} .spinner{width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.28);border-top-color:#fff;animation:spin .8s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
-
-<div id="loading"><div class="spinner"></div><p>Processing…</p></div>
-
-<!-- SCREEN 1: Camera -->
-<div class="screen active" id="cameraScreen">
-  <div class="header">
-    <div>
-      <h1>🎨 ColorPicker </h1>
-      <p>Point camera at the color you want to match</p>
-    </div>
-  </div>
-  <div id="cameraWrapper">
-    <video id="video" autoplay playsinline muted></video>
-    <div class="cam-hint">Hold steady — good lighting helps!</div>
-    <button id="captureBtn">📷</button>
-    <button id="fileBtn">📁 Photo</button>
-  </div>
-  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
-</div>
-
-<!-- SCREEN 2: Select Area -->
-<div class="screen" id="sampleScreen">
-  <div class="header" style="background:#1a1a1a; border-color:#333;">
-    <button class="back-btn" onclick="goTo('cameraScreen')">‹</button>
-    <div>
-      <h1 style="color:#fff;">Select Color Area</h1>
-      <p style="color:#888;">Drag a box over the color to sample</p>
-    </div>
-  </div>
-  <div id="canvasWrapper">
-    <canvas id="photoCanvas"></canvas>
-    <div id="selectionBox"></div>
-  </div>
-  <p class="sample-hint">Drag over a flat, evenly-lit area of the color</p>
-  <div id="sampleActions">
-    <button class="btn btn-ghost" onclick="goTo('cameraScreen')">Retake</button>
-    <button class="btn btn-primary" onclick="analyzeSelection()">Sample Color →</button>
-  </div>
-</div>
-
-<!-- SCREEN 3: Results -->
-<div class="screen" id="resultsScreen">
-  <div class="header">
-    <button class="back-btn" onclick="goTo('sampleScreen')">‹</button>
-    <div>
-      <h1>Color Matches</h1>
-      <p>Tap the closest match to your real-world color</p>
-    </div>
-  </div>
-  <div class="results-body">
-    <div class="swatch-row">
-      <div id="sampledSwatch"></div>
-      <div class="swatch-vals">
-        <strong id="swatchLabel">Sampled Color</strong><br>
-        <span id="swatchRGB"></span><br>
-        <span id="swatchLAB"></span>
-      </div>
-    </div>
-    <div class="section-title">Nearest Paint Colors — tap the closest match</div>
-    <div class="paint-grid" id="paintGrid"></div>
-    <div id="selectionBanner">
-      <h3 id="bannerName"></h3>
-      <p id="bannerDetail"></p>
-    </div>
-  </div>
-</div>
-
+<div id="loading"><div class="spinner"></div><p style="color:#fff">Processing…</p></div>
+<div class="screen active" id="cameraScreen"><div class="header"><div><h1>ColorPicker</h1><p>Capture a color, then compare tighter Sherwin-Williams matches</p></div></div><div id="cameraWrapper"><video id="video" autoplay playsinline muted></video><div class="cam-hint">Use even lighting for best results</div><button id="captureBtn">📷</button><button id="fileBtn">📁 Photo</button></div><input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none"></div>
+<div class="screen" id="sampleScreen"><div class="header" style="background:#1a1a1a;border-color:#333"><button class="back-btn" onclick="goTo('cameraScreen')">‹</button><div><h1 style="color:#fff">Select Area</h1><p style="color:#999">Drag a box over the color area to average it</p></div></div><div id="canvasWrapper"><canvas id="photoCanvas"></canvas><div id="selectionBox"></div></div><p class="sample-hint">Pick a flat, evenly lit area. Bigger selections usually give better averages.</p><div id="sampleActions"><button class="btn btn-ghost" onclick="goTo('cameraScreen')">Retake</button><button class="btn btn-primary" onclick="analyzeSelection()">Sample Color →</button></div></div>
+<div class="screen" id="resultsScreen"><div class="header"><button class="back-btn" onclick="goTo('sampleScreen')">‹</button><div><h1>Nearest Matches</h1><p>Tap one to see nearby Sherwin-Williams colors</p></div></div><div class="results-body"><div class="card swatch-row"><div id="sampledSwatch"></div><div class="swatch-vals"><strong id="swatchLabel">Sampled Color</strong><br><span id="swatchRGB"></span><br><span id="swatchLAB"></span><br><span id="swatchHint"></span></div></div><div class="section-title">Best Sherwin-Williams matches</div><div class="paint-grid" id="paintGrid"></div><div id="selectionBanner"></div></div></div>
+<div class="screen" id="neighborsScreen"><div class="header"><button class="back-btn" onclick="goTo('resultsScreen')">‹</button><div><h1>Nearby Colors</h1><p>Colors beside your chosen paint from the same manufacturer</p></div></div><div class="results-body"><div class="card swatch-row"><div id="selectedSwatch"></div><div class="swatch-vals"><strong id="selectedLabel"></strong><br><span id="selectedCode"></span><br><span id="selectedMeta"></span></div></div><div class="section-title">Around your selected color</div><div id="neighborsList" style="display:flex;flex-direction:column;gap:12px"></div></div></div>
 <script>
-const PAINTS = [
-  {brand:"Sherwin-Williams",name:"Alabaster",code:"SW 7008",r:237,g:234,b:224,L:92.68,a:-0.72,b_lab:5.21},
-  {brand:"Sherwin-Williams",name:"Pure White",code:"SW 7005",r:242,g:240,b:234,L:94.8,a:-0.38,b_lab:3.13},
-  {brand:"Sherwin-Williams",name:"Accessible Beige",code:"SW 7036",r:211,g:203,b:186,L:81.6,a:0.52,b_lab:9.72},
-  {brand:"Sherwin-Williams",name:"Agreeable Gray",code:"SW 7029",r:209,g:203,b:193,L:81.1,a:0.21,b_lab:5.84},
-  {brand:"Sherwin-Williams",name:"Repose Gray",code:"SW 7015",r:196,g:193,b:188,L:77.4,a:0.11,b_lab:2.89},
-  {brand:"Sherwin-Williams",name:"Mindful Gray",code:"SW 7016",r:179,g:174,b:165,L:70.4,a:0.28,b_lab:4.88},
-  {brand:"Sherwin-Williams",name:"Worldly Gray",code:"SW 7043",r:196,g:191,b:180,L:76.8,a:0.31,b_lab:5.52},
-  {brand:"Sherwin-Williams",name:"Creamy",code:"SW 7012",r:237,g:228,b:207,L:90.8,a:0.12,b_lab:11.4},
-  {brand:"Sherwin-Williams",name:"Antique White",code:"SW 6119",r:234,g:225,b:207,L:89.7,a:0.38,b_lab:10.8},
-  {brand:"Sherwin-Williams",name:"Navajo White",code:"SW 6126",r:233,g:218,b:193,L:87.8,a:1.02,b_lab:14.3},
-  {brand:"Sherwin-Williams",name:"Naval",code:"SW 6244",r:52,g:73,b:94,L:29.8,a:-1.2,b_lab:-17.4},
-  {brand:"Sherwin-Williams",name:"Cyberspace",code:"SW 7076",r:55,g:60,b:65,L:24.8,a:-0.5,b_lab:-3.2},
-  {brand:"Sherwin-Williams",name:"Iron Ore",code:"SW 7069",r:74,g:72,b:67,L:30.1,a:0.4,b_lab:3.1},
-  {brand:"Sherwin-Williams",name:"Tricorn Black",code:"SW 6258",r:42,g:42,b:43,L:17.2,a:-0.1,b_lab:-0.5},
-  {brand:"Sherwin-Williams",name:"Urbane Bronze",code:"SW 7048",r:88,g:82,b:72,L:34.5,a:1.1,b_lab:6.8},
-  {brand:"Sherwin-Williams",name:"Peppercorn",code:"SW 7674",r:101,g:97,b:90,L:40.1,a:0.6,b_lab:4.7},
-  {brand:"Sherwin-Williams",name:"Pewter Green",code:"SW 6208",r:114,g:134,b:117,L:53.1,a:-7.2,b_lab:5.8},
-  {brand:"Sherwin-Williams",name:"Evergreen Fog",code:"SW 9130",r:137,g:148,b:133,L:58.9,a:-4.8,b_lab:5.2},
-  {brand:"Sherwin-Williams",name:"Sage",code:"SW 0016",r:153,g:163,b:139,L:64.4,a:-5.3,b_lab:9.8},
-  {brand:"Sherwin-Williams",name:"Rosemary",code:"SW 6187",r:88,g:108,b:84,L:42.8,a:-9.4,b_lab:8.4},
-  {brand:"Sherwin-Williams",name:"Cavern Clay",code:"SW 7701",r:188,g:120,b:93,L:54.8,a:19.4,b_lab:24.6},
-  {brand:"Sherwin-Williams",name:"Redend Point",code:"SW 9081",r:193,g:158,b:141,L:66.4,a:10.8,b_lab:13.2},
-  {brand:"Sherwin-Williams",name:"Antler Velvet",code:"SW 9174",r:168,g:140,b:115,L:59.4,a:7.8,b_lab:17.8},
-  {brand:"Sherwin-Williams",name:"Heron Plume",code:"SW 6070",r:220,g:210,b:197,L:84.2,a:1.2,b_lab:7.4},
-  {brand:"Sherwin-Williams",name:"Inviting Ivory",code:"SW 6372",r:228,g:216,b:190,L:87.0,a:0.8,b_lab:13.8},
-  {brand:"Benjamin Moore",name:"White Dove",code:"OC-17",r:242,g:240,b:232,L:94.6,a:-0.3,b_lab:3.8},
-  {brand:"Benjamin Moore",name:"Chantilly Lace",code:"OC-65",r:246,g:244,b:240,L:96.2,a:-0.2,b_lab:1.8},
-  {brand:"Benjamin Moore",name:"Simply White",code:"OC-117",r:245,g:242,b:233,L:95.6,a:-0.2,b_lab:4.1},
-  {brand:"Benjamin Moore",name:"White Heron",code:"OC-57",r:237,g:236,b:228,L:93.2,a:-0.3,b_lab:3.6},
-  {brand:"Benjamin Moore",name:"Edgecomb Gray",code:"HC-173",r:210,g:203,b:190,L:81.4,a:0.4,b_lab:7.2},
-  {brand:"Benjamin Moore",name:"Revere Pewter",code:"HC-172",r:196,g:189,b:175,L:76.2,a:0.5,b_lab:7.8},
-  {brand:"Benjamin Moore",name:"Pale Oak",code:"OC-20",r:218,g:210,b:197,L:84.0,a:0.6,b_lab:7.8},
-  {brand:"Benjamin Moore",name:"Balboa Mist",code:"OC-27",r:208,g:204,b:193,L:81.6,a:0.1,b_lab:5.8},
-  {brand:"Benjamin Moore",name:"Sea Salt",code:"CSP-95",r:180,g:207,b:199,L:81.0,a:-8.2,b_lab:1.8},
-  {brand:"Benjamin Moore",name:"Hale Navy",code:"HC-154",r:68,g:84,b:106,L:34.2,a:-1.4,b_lab:-14.8},
-  {brand:"Benjamin Moore",name:"Van Deusen Blue",code:"HC-156",r:67,g:95,b:127,L:38.6,a:-2.8,b_lab:-18.4},
-  {brand:"Benjamin Moore",name:"Kendall Charcoal",code:"HC-166",r:97,g:98,b:96,L:40.0,a:-0.2,b_lab:0.8},
-  {brand:"Benjamin Moore",name:"Black Beauty",code:"2128-10",r:31,g:29,b:30,L:11.8,a:0.4,b_lab:-0.2},
-  {brand:"Benjamin Moore",name:"Wrought Iron",code:"2124-10",r:66,g:68,b:67,L:27.4,a:-0.6,b_lab:0.4},
-  {brand:"Benjamin Moore",name:"Saybrook Sage",code:"HC-114",r:152,g:162,b:138,L:64.2,a:-5.2,b_lab:9.4},
-  {brand:"Benjamin Moore",name:"Guilford Green",code:"HC-116",r:143,g:163,b:143,L:64.4,a:-8.2,b_lab:7.4},
-  {brand:"Benjamin Moore",name:"Caldwell Green",code:"HC-124",r:93,g:118,b:84,L:46.8,a:-12.4,b_lab:12.2},
-  {brand:"Benjamin Moore",name:"Pale Blush",code:"2173-60",r:230,g:196,b:180,L:81.2,a:9.8,b_lab:11.8},
-  {brand:"Benjamin Moore",name:"Newborn",code:"2170-70",r:245,g:220,b:210,L:89.4,a:6.2,b_lab:9.4}
-];
-
-let stream = null, capturedImageData = null, displayScale = 1;
-let selection = { x:0, y:0, w:0, h:0, dragging:false, startX:0, startY:0 };
-
-function goTo(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (id === 'cameraScreen') startCamera();
-  if (id === 'sampleScreen') setupCanvas();
-}
-
-async function startCamera() {
-  const video = document.getElementById('video');
-  try {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width:{ideal:1920}, height:{ideal:1080} }
-    });
-    video.srcObject = stream;
-  } catch(e) { console.warn('Camera unavailable:', e); }
-}
-
-document.getElementById('captureBtn').addEventListener('click', () => {
-  const video = document.getElementById('video');
-  const c = document.createElement('canvas');
-  c.width = video.videoWidth || 1280; c.height = video.videoHeight || 720;
-  c.getContext('2d').drawImage(video, 0, 0);
-  capturedImageData = c.toDataURL('image/jpeg', 0.95);
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  goTo('sampleScreen');
-});
-
-document.getElementById('fileBtn').addEventListener('click', () =>
-  document.getElementById('fileInput').click());
-document.getElementById('fileInput').addEventListener('change', e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => { capturedImageData = ev.target.result; goTo('sampleScreen'); };
-  reader.readAsDataURL(file);
-});
-
-function setupCanvas() {
-  const canvas = document.getElementById('photoCanvas');
-  const img = new Image();
-  img.onload = () => {
-    const wrapper = document.getElementById('canvasWrapper');
-    const scale = Math.min(wrapper.clientWidth/img.width, wrapper.clientHeight/img.height);
-    canvas.width = img.width; canvas.height = img.height;
-    canvas.style.width = (img.width*scale)+'px'; canvas.style.height = (img.height*scale)+'px';
-    displayScale = scale;
-    canvas.getContext('2d').drawImage(img, 0, 0);
-    selection = { x:0, y:0, w:0, h:0, dragging:false, startX:0, startY:0 };
-    document.getElementById('selectionBox').style.display = 'none';
-  };
-  img.src = capturedImageData;
-}
-
-function getPos(clientX, clientY) {
-  const r = document.getElementById('photoCanvas').getBoundingClientRect();
-  return { x:(clientX-r.left)/displayScale, y:(clientY-r.top)/displayScale };
-}
-
-function updateBox() {
-  const box = document.getElementById('selectionBox');
-  const cr = document.getElementById('photoCanvas').getBoundingClientRect();
-  const wr = document.getElementById('canvasWrapper').getBoundingClientRect();
-  box.style.display = 'block';
-  box.style.left   = (cr.left-wr.left + selection.x*displayScale)+'px';
-  box.style.top    = (cr.top -wr.top  + selection.y*displayScale)+'px';
-  box.style.width  = (selection.w*displayScale)+'px';
-  box.style.height = (selection.h*displayScale)+'px';
-}
-
-const cw = document.getElementById('canvasWrapper');
-cw.addEventListener('touchstart', e => { e.preventDefault(); const t=e.touches[0];
-  const p=getPos(t.clientX,t.clientY); selection.startX=p.x; selection.startY=p.y; selection.dragging=true; },{passive:false});
-cw.addEventListener('touchmove',  e => { e.preventDefault(); if(!selection.dragging) return;
-  const t=e.touches[0]; const p=getPos(t.clientX,t.clientY);
-  selection.x=Math.min(p.x,selection.startX); selection.y=Math.min(p.y,selection.startY);
-  selection.w=Math.abs(p.x-selection.startX); selection.h=Math.abs(p.y-selection.startY); updateBox(); },{passive:false});
-cw.addEventListener('touchend', () => { selection.dragging=false; });
-cw.addEventListener('mousedown', e => { const p=getPos(e.clientX,e.clientY);
-  selection.startX=p.x; selection.startY=p.y; selection.dragging=true; });
-cw.addEventListener('mousemove', e => { if(!selection.dragging) return;
-  const p=getPos(e.clientX,e.clientY);
-  selection.x=Math.min(p.x,selection.startX); selection.y=Math.min(p.y,selection.startY);
-  selection.w=Math.abs(p.x-selection.startX); selection.h=Math.abs(p.y-selection.startY); updateBox(); });
-cw.addEventListener('mouseup', () => { selection.dragging=false; });
-
-function rgbToLab(r,g,b) {
-  const lin = c => { c/=255; return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4); };
-  const rl=lin(r),gl=lin(g),bl=lin(b);
-  let X=rl*0.4124564+gl*0.3575761+bl*0.1804375;
-  let Y=rl*0.2126729+gl*0.7151522+bl*0.0721750;
-  let Z=rl*0.0193339+gl*0.1191920+bl*0.9503041;
-  X/=0.95047; Z/=1.08883;
-  const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;
-  return {L:116*f(Y)-16, a:500*(f(X)-f(Y)), b:200*(f(Y)-f(Z))};
-}
-
-function deltaE(l1,l2) {
-  return Math.sqrt(Math.pow(l1.L-l2.L,2)+Math.pow(l1.a-l2.a,2)+Math.pow(l1.b-l2.b,2));
-}
-
-function analyzeSelection() {
-  if (selection.w<10||selection.h<10) { alert('Please drag a larger area to sample.'); return; }
-  document.getElementById('loading').classList.add('show');
-  setTimeout(() => {
-    const canvas=document.getElementById('photoCanvas'), ctx=canvas.getContext('2d');
-    const x=Math.max(0,Math.round(selection.x)), y=Math.max(0,Math.round(selection.y));
-    const w=Math.min(canvas.width-x,Math.round(selection.w));
-    const h=Math.min(canvas.height-y,Math.round(selection.h));
-    const px=ctx.getImageData(x,y,w,h).data;
-    let rS=0,gS=0,bS=0,n=0;
-    for(let i=0;i<px.length;i+=4){rS+=px[i];gS+=px[i+1];bS+=px[i+2];n++;}
-    const r=Math.round(rS/n), g=Math.round(gS/n), b=Math.round(bS/n);
-    const lab=rgbToLab(r,g,b);
-    const matches=PAINTS.map(p=>({...p,de:deltaE(lab,{L:p.L,a:p.a,b:p.b_lab})}))
-      .sort((a,b)=>a.de-b.de).slice(0,8);
-    showResults(r,g,b,lab,matches);
-    document.getElementById('loading').classList.remove('show');
-  },50);
-}
-
-function showResults(r,g,b,lab,matches) {
-  const hex='#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
-  document.getElementById('sampledSwatch').style.background=hex;
-  document.getElementById('swatchLabel').textContent=hex.toUpperCase();
-  document.getElementById('swatchRGB').textContent=`RGB: ${r}, ${g}, ${b}`;
-  document.getElementById('swatchLAB').textContent=
-    `LAB: ${lab.L.toFixed(1)}, ${lab.a.toFixed(1)}, ${lab.b.toFixed(1)}`;
-  const grid=document.getElementById('paintGrid');
-  grid.innerHTML='';
-  matches.forEach(p => {
-    const ch='#'+[p.r,p.g,p.b].map(v=>v.toString(16).padStart(2,'0')).join('');
-    const card=document.createElement('div');
-    card.className='paint-card';
-    card.innerHTML=`<div class="paint-chip" style="background:${ch}"></div>
-      <div class="paint-info">
-        <div class="paint-brand">${p.brand}</div>
-        <div class="paint-name">${p.name}</div>
-        <div class="paint-code">${p.code}</div>
-        <div class="paint-de">ΔE ${p.de.toFixed(1)}</div>
-      </div>`;
-    card.addEventListener('click',()=>{
-      document.querySelectorAll('.paint-card').forEach(c=>c.classList.remove('selected'));
-      card.classList.add('selected');
-      const banner=document.getElementById('selectionBanner');
-      banner.style.display='block'; banner.style.background=ch;
-      const lum=(0.299*p.r+0.587*p.g+0.114*p.b)/255;
-      banner.style.color=lum>0.5?'#222':'#fff';
-      document.getElementById('bannerName').textContent=`✓ ${p.name} — ${p.code}`;
-      document.getElementById('bannerDetail').textContent=
-        `${p.brand} · Bring this code to the paint counter`;
-      banner.scrollIntoView({behavior:'smooth',block:'nearest'});
-    });
-    grid.appendChild(card);
-  });
-  document.getElementById('selectionBanner').style.display='none';
-  goTo('resultsScreen');
-}
-
+const PAINTS = [{"brand": "Sherwin-Williams", "name": "Oat Milk", "code": "SW9501", "r": 222, "g": 218, "b": 205, "hex": "DEDACD", "category": "Whites", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Arrowroote", "code": "SW9502", "r": 228, "g": 222, "b": 207, "hex": "E4DECF", "category": "Whites", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Cheviot", "code": "SW9503", "r": 246, "g": 242, "b": 232, "hex": "F6F2E8", "category": "Whites", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Cold Foam", "code": "SW9504", "r": 239, "g": 236, "b": 227, "hex": "EFECE3", "category": "Whites", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Frost Bite", "code": "SW9505", "r": 246, "g": 240, "b": 229, "hex": "F6F0E5", "category": "Whites", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Warm Winter", "code": "SW9506", "r": 225, "g": 217, "b": 198, "hex": "E1D9C6", "category": "Tints", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Cream and Sugar", "code": "SW9507", "r": 221, "g": 207, "b": 185, "hex": "DDCFB9", "category": "Tints", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Natural Wool", "code": "SW9508", "r": 215, "g": 201, "b": 174, "hex": "D7C9AE", "category": "Tints", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Steamed Chai", "code": "SW9509", "r": 224, "g": 212, "b": 189, "hex": "E0D4BD", "category": "Tints", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Peace of Mind", "code": "SW9510", "r": 196, "g": 185, "b": 163, "hex": "C4B9A3", "category": "Tints", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Warm Oats", "code": "SW9511", "r": 216, "g": 207, "b": 186, "hex": "D8CFBA", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Threaded Loom", "code": "SW9512", "r": 206, "g": 194, "b": 170, "hex": "CEC2AA", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Sleepy Owlet", "code": "SW9513", "r": 181, "g": 167, "b": 141, "hex": "B5A78D", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Zinc Luster", "code": "SW9514", "r": 140, "g": 131, "b": 115, "hex": "8C8373", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Tungsten", "code": "SW9515", "r": 88, "g": 78, "b": 65, "hex": "584E41", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Accolade", "code": "SW9516", "r": 213, "g": 206, "b": 191, "hex": "D5CEBF", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Outrigger", "code": "SW9517", "r": 187, "g": 178, "b": 160, "hex": "BBB2A0", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Featherstone", "code": "SW9518", "r": 153, "g": 145, "b": 124, "hex": "99917C", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Country Tweed", "code": "SW9519", "r": 131, "g": 123, "b": 104, "hex": "837B68", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Nocturne", "code": "SW9520", "r": 84, "g": 78, "b": 66, "hex": "544E42", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Simple Stone", "code": "SW9521", "r": 205, "g": 199, "b": 183, "hex": "CDC7B7", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Meander", "code": "SW9522", "r": 182, "g": 174, "b": 153, "hex": "B6AE99", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Canal Street", "code": "SW9523", "r": 150, "g": 146, "b": 129, "hex": "969281", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Crooked River", "code": "SW9524", "r": 121, "g": 120, "b": 105, "hex": "797869", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Hidden Trail", "code": "SW9525", "r": 95, "g": 91, "b": 77, "hex": "5F5B4D", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Woolen Mittens", "code": "SW9526", "r": 191, "g": 179, "b": 151, "hex": "BFB397", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Worn Khaki", "code": "SW9527", "r": 166, "g": 156, "b": 129, "hex": "A69C81", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Vintage", "code": "SW9528", "r": 144, "g": 132, "b": 104, "hex": "908468", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Twig Basket", "code": "SW9529", "r": 125, "g": 110, "b": 82, "hex": "7D6E52", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Momentum", "code": "SW9530", "r": 92, "g": 78, "b": 46, "hex": "5C4E2E", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Stone Guardians", "code": "SW9531", "r": 202, "g": 186, "b": 151, "hex": "CABA97", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Earthy Ochre", "code": "SW9532", "r": 190, "g": 174, "b": 136, "hex": "BEAE88", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Rattan Palm", "code": "SW9533", "r": 158, "g": 142, "b": 108, "hex": "9E8E6C", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "River Reed", "code": "SW9534", "r": 148, "g": 135, "b": 110, "hex": "94876E", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Nettle", "code": "SW9535", "r": 102, "g": 91, "b": 68, "hex": "665B44", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Lamb's Wool", "code": "SW9536", "r": 202, "g": 181, "b": 152, "hex": "CAB598", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Sugared Almond", "code": "SW9537", "r": 180, "g": 157, "b": 123, "hex": "B49D7B", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Tangled Twine", "code": "SW9538", "r": 161, "g": 138, "b": 103, "hex": "A18A67", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Shaker Peg", "code": "SW9539", "r": 141, "g": 117, "b": 83, "hex": "8D7553", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "Timber Beam", "code": "SW9540", "r": 121, "g": 96, "b": 64, "hex": "796040", "category": "Natural Neutrals", "collection": "Form + Function"}, {"brand": "Sherwin-Williams", "name": "White Snow", "code": "SW9541", "r": 245, "g": 244, "b": 238, "hex": "F5F4EE", "category": "Whites", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Natural White", "code": "SW9542", "r": 236, "g": 235, "b": 232, "hex": "ECEBE8", "category": "Whites", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Gypsum", "code": "SW9543", "r": 234, "g": 235, "b": 231, "hex": "EAEBE7", "category": "Whites", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Dashing", "code": "SW9544", "r": 234, "g": 235, "b": 232, "hex": "EAEBE8", "category": "Whites", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Ghosted", "code": "SW9545", "r": 226, "g": 224, "b": 220, "hex": "E2E0DC", "category": "Whites", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Lunar Lite", "code": "SW9546", "r": 224, "g": 221, "b": 216, "hex": "E0DDD8", "category": "Tints", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Vessel", "code": "SW9547", "r": 205, "g": 200, "b": 191, "hex": "CDC8BF", "category": "Tints", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Sweater Weather", "code": "SW9548", "r": 204, "g": 204, "b": 197, "hex": "CCCCC5", "category": "Tints", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Touch of Grey", "code": "SW9549", "r": 209, "g": 207, "b": 202, "hex": "D1CFCA", "category": "Tints", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Mercurial", "code": "SW9550", "r": 209, "g": 204, "b": 198, "hex": "D1CCC6", "category": "Tints", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Skipping Rocks", "code": "SW9551", "r": 209, "g": 208, "b": 201, "hex": "D1D0C9", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Antimony", "code": "SW9552", "r": 199, "g": 200, "b": 193, "hex": "C7C8C1", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Allegory", "code": "SW9553", "r": 180, "g": 178, "b": 169, "hex": "B4B2A9", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Going Grey", "code": "SW9554", "r": 131, "g": 128, "b": 122, "hex": "83807A", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Storm Warning", "code": "SW9555", "r": 105, "g": 104, "b": 99, "hex": "696863", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Intrepid Grey", "code": "SW9556", "r": 224, "g": 226, "b": 224, "hex": "E0E2E0", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Autonomous", "code": "SW9557", "r": 198, "g": 199, "b": 197, "hex": "C6C7C5", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Castlegate", "code": "SW9558", "r": 160, "g": 165, "b": 165, "hex": "A0A5A5", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Scattered Showers", "code": "SW9559", "r": 123, "g": 130, "b": 133, "hex": "7B8285", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Night Out", "code": "SW9560", "r": 101, "g": 106, "b": 110, "hex": "656A6E", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Guild Grey", "code": "SW9561", "r": 210, "g": 209, "b": 203, "hex": "D2D1CB", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Fortitude", "code": "SW9562", "r": 198, "g": 197, "b": 193, "hex": "C6C5C1", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Bedrock", "code": "SW9563", "r": 158, "g": 157, "b": 153, "hex": "9E9D99", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Before the Storm", "code": "SW9564", "r": 116, "g": 119, "b": 122, "hex": "74777A", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Forged Steel", "code": "SW9565", "r": 91, "g": 91, "b": 89, "hex": "5B5B59", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Grey Heron", "code": "SW9566", "r": 214, "g": 210, "b": 202, "hex": "D6D2CA", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Viaduct", "code": "SW9567", "r": 193, "g": 187, "b": 176, "hex": "C1BBB0", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Smooth Stone", "code": "SW9568", "r": 168, "g": 162, "b": 152, "hex": "A8A298", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Alloy", "code": "SW9569", "r": 142, "g": 138, "b": 129, "hex": "8E8A81", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Ironclad", "code": "SW9570", "r": 97, "g": 92, "b": 85, "hex": "615C55", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Solstice", "code": "SW9571", "r": 219, "g": 217, "b": 210, "hex": "DBD9D2", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Warm Pewter", "code": "SW9572", "r": 180, "g": 173, "b": 166, "hex": "B4ADA6", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Hibernate", "code": "SW9573", "r": 172, "g": 166, "b": 159, "hex": "ACA69F", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Hulett Ore", "code": "SW9574", "r": 114, "g": 111, "b": 108, "hex": "726F6C", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Metropolis", "code": "SW9575", "r": 89, "g": 80, "b": 79, "hex": "59504F", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Whirlwind", "code": "SW9576", "r": 216, "g": 207, "b": 198, "hex": "D8CFC6", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Soft Suede", "code": "SW9577", "r": 208, "g": 198, "b": 184, "hex": "D0C6B8", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Restoration", "code": "SW9578", "r": 175, "g": 164, "b": 153, "hex": "AFA499", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Timeless Taupe", "code": "SW9579", "r": 144, "g": 131, "b": 121, "hex": "908379", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Cracked Pepper", "code": "SW9580", "r": 72, "g": 60, "b": 55, "hex": "483C37", "category": "Cool Neutrals", "collection": "Minimal + Modern"}, {"brand": "Sherwin-Williams", "name": "Cotton", "code": "SW9581", "r": 238, "g": 235, "b": 225, "hex": "EEEBE1", "category": "Whites", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "White Sand", "code": "SW9582", "r": 237, "g": 236, "b": 231, "hex": "EDECE7", "category": "Whites", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Sanctuary", "code": "SW9583", "r": 230, "g": 226, "b": 217, "hex": "E6E2D9", "category": "Whites", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Mortar", "code": "SW9584", "r": 227, "g": 223, "b": 213, "hex": "E3DFD5", "category": "Whites", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Sunbleached", "code": "SW9585", "r": 229, "g": 224, "b": 215, "hex": "E5E0D7", "category": "Whites", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "White Sesame", "code": "SW9586", "r": 227, "g": 219, "b": 205, "hex": "E3DBCD", "category": "Tints", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Mushroom", "code": "SW9587", "r": 208, "g": 199, "b": 183, "hex": "D0C7B7", "category": "Tints", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "High Sierra", "code": "SW9588", "r": 200, "g": 192, "b": 179, "hex": "C8C0B3", "category": "Tints", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Limewash", "code": "SW9589", "r": 219, "g": 213, "b": 203, "hex": "DBD5CB", "category": "Tints", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Taupe of the Morning", "code": "SW9590", "r": 218, "g": 210, "b": 198, "hex": "DAD2C6", "category": "Tints", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Whisper", "code": "SW9591", "r": 187, "g": 178, "b": 163, "hex": "BBB2A3", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Illusion", "code": "SW9592", "r": 176, "g": 168, "b": 153, "hex": "B0A899", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Lauriston Stone", "code": "SW9593", "r": 134, "g": 129, "b": 114, "hex": "868172", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Settlement", "code": "SW9594", "r": 126, "g": 121, "b": 112, "hex": "7E7970", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Braintree", "code": "SW9595", "r": 101, "g": 99, "b": 91, "hex": "65635B", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Pachyderm", "code": "SW9596", "r": 186, "g": 179, "b": 166, "hex": "BAB3A6", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Western Reserve", "code": "SW9597", "r": 168, "g": 162, "b": 148, "hex": "A8A294", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Solitary Slate", "code": "SW9598", "r": 128, "g": 121, "b": 109, "hex": "80796D", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Limestone", "code": "SW9599", "r": 106, "g": 101, "b": 92, "hex": "6A655C", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Armory", "code": "SW9600", "r": 65, "g": 61, "b": 60, "hex": "413D3C", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Symmetry", "code": "SW9601", "r": 213, "g": 203, "b": 190, "hex": "D5CBBE", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Studio Beige", "code": "SW9602", "r": 193, "g": 178, "b": 161, "hex": "C1B2A1", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Quarry Stone", "code": "SW9603", "r": 151, "g": 142, "b": 127, "hex": "978E7F", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Tea Leaf", "code": "SW9604", "r": 98, "g": 83, "b": 70, "hex": "625346", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Clove", "code": "SW9605", "r": 69, "g": 62, "b": 57, "hex": "453E39", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Slumber Sloth", "code": "SW9606", "r": 206, "g": 197, "b": 182, "hex": "CEC5B6", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Tanglewood", "code": "SW9607", "r": 155, "g": 143, "b": 126, "hex": "9B8F7E", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Habitat", "code": "SW9608", "r": 137, "g": 125, "b": 109, "hex": "897D6D", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Landmark", "code": "SW9609", "r": 118, "g": 104, "b": 89, "hex": "766859", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Stony Creek", "code": "SW9610", "r": 87, "g": 83, "b": 78, "hex": "57534E", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Minimalist", "code": "SW9611", "r": 202, "g": 190, "b": 173, "hex": "CABEAD", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Perfect Khaki", "code": "SW9612", "r": 178, "g": 164, "b": 146, "hex": "B2A492", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Terrain", "code": "SW9613", "r": 140, "g": 132, "b": 117, "hex": "8C8475", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Carriage Stone", "code": "SW9614", "r": 124, "g": 116, "b": 102, "hex": "7C7466", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Prospect", "code": "SW9615", "r": 98, "g": 88, "b": 75, "hex": "62584B", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Dumpling", "code": "SW9616", "r": 216, "g": 208, "b": 193, "hex": "D8D0C1", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Beachcomber", "code": "SW9617", "r": 208, "g": 193, "b": 172, "hex": "D0C1AC", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Woodbridge", "code": "SW9618", "r": 159, "g": 142, "b": 122, "hex": "9F8E7A", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Teakwood", "code": "SW9619", "r": 141, "g": 126, "b": 109, "hex": "8D7E6D", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Prelude", "code": "SW9620", "r": 91, "g": 86, "b": 79, "hex": "5B564F", "category": "Warm Neutrals", "collection": "Warm + Welcoming"}, {"brand": "Sherwin-Williams", "name": "Clean Slate", "code": "SW9621", "r": 224, "g": 227, "b": 226, "hex": "E0E3E2", "category": "Whites", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "White Sail", "code": "SW9622", "r": 235, "g": 235, "b": 231, "hex": "EBEBE7", "category": "Whites", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Snowbelt", "code": "SW9623", "r": 238, "g": 241, "b": 236, "hex": "EEF1EC", "category": "Whites", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Winsome Grey", "code": "SW9624", "r": 231, "g": 233, "b": 231, "hex": "E7E9E7", "category": "Whites", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Grey Mist", "code": "SW9625", "r": 228, "g": 225, "b": 214, "hex": "E4E1D6", "category": "Whites", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Glacier Bay", "code": "SW9626", "r": 225, "g": 225, "b": 219, "hex": "E1E1DB", "category": "Tints", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Pacific Fog", "code": "SW9627", "r": 220, "g": 220, "b": 213, "hex": "DCDCD5", "category": "Tints", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Winter Walk", "code": "SW9628", "r": 216, "g": 213, "b": 204, "hex": "D8D5CC", "category": "Tints", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Constellation", "code": "SW9629", "r": 205, "g": 204, "b": 195, "hex": "CDCCC3", "category": "Tints", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Moorstone", "code": "SW9630", "r": 207, "g": 209, "b": 202, "hex": "CFD1CA", "category": "Tints", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Mantra", "code": "SW9631", "r": 220, "g": 226, "b": 223, "hex": "DCE2DF", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Serenely", "code": "SW9632", "r": 206, "g": 215, "b": 213, "hex": "CED7D5", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Silver Lake", "code": "SW9633", "r": 182, "g": 195, "b": 196, "hex": "B6C3C4", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Morning at Sea", "code": "SW9634", "r": 130, "g": 151, "b": 155, "hex": "82979B", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Stargazer", "code": "SW9635", "r": 96, "g": 117, "b": 122, "hex": "60757A", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Windchill", "code": "SW9636", "r": 213, "g": 216, "b": 215, "hex": "D5D8D7", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Mineral", "code": "SW9637", "r": 176, "g": 183, "b": 183, "hex": "B0B7B7", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Breakwater", "code": "SW9638", "r": 162, "g": 168, "b": 166, "hex": "A2A8A6", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Rain Cloud", "code": "SW9639", "r": 83, "g": 97, "b": 104, "hex": "536168", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Sea Mariner", "code": "SW9640", "r": 67, "g": 74, "b": 84, "hex": "434A54", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Dew Drop", "code": "SW9641", "r": 212, "g": 220, "b": 220, "hex": "D4DCDC", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Silver Tipped Sage", "code": "SW9642", "r": 191, "g": 194, "b": 191, "hex": "BFC2BF", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Eventide", "code": "SW9643", "r": 163, "g": 175, "b": 172, "hex": "A3AFAC", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Portsmouth", "code": "SW9644", "r": 118, "g": 132, "b": 130, "hex": "768482", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Big Dipper", "code": "SW9645", "r": 65, "g": 73, "b": 75, "hex": "41494B", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Create", "code": "SW9646", "r": 201, "g": 202, "b": 191, "hex": "C9CABF", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Soft Sage", "code": "SW9647", "r": 188, "g": 188, "b": 174, "hex": "BCBCAE", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Frosted Fern", "code": "SW9648", "r": 167, "g": 167, "b": 150, "hex": "A7A796", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Willowleaf", "code": "SW9649", "r": 133, "g": 135, "b": 123, "hex": "85877B", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Succulent", "code": "SW9650", "r": 97, "g": 108, "b": 100, "hex": "616C64", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Sea Spray", "code": "SW9651", "r": 200, "g": 206, "b": 198, "hex": "C8CEC6", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Hazel Gaze", "code": "SW9652", "r": 184, "g": 191, "b": 177, "hex": "B8BFB1", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Forever Green", "code": "SW9653", "r": 170, "g": 180, "b": 167, "hex": "AAB4A7", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Taiga", "code": "SW9654", "r": 118, "g": 128, "b": 120, "hex": "768078", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Mountain Pass", "code": "SW9655", "r": 92, "g": 106, "b": 106, "hex": "5C6A6A", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Pine Frost", "code": "SW9656", "r": 208, "g": 213, "b": 203, "hex": "D0D5CB", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Piedmont", "code": "SW9657", "r": 194, "g": 206, "b": 197, "hex": "C2CEC5", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Fresh Eucalyptus", "code": "SW9658", "r": 173, "g": 188, "b": 180, "hex": "ADBCB4", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Marine", "code": "SW9659", "r": 148, "g": 166, "b": 157, "hex": "94A69D", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Tarragon", "code": "SW9660", "r": 66, "g": 78, "b": 83, "hex": "424E53", "category": "Blues + Greens", "collection": "Rustic + Refined"}, {"brand": "Sherwin-Williams", "name": "Radiant Dawn", "code": "SW9661", "r": 235, "g": 224, "b": 206, "hex": "EBE0CE", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Fresh Zest", "code": "SW9662", "r": 245, "g": 233, "b": 207, "hex": "F5E9CF", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Honeypot", "code": "SW9663", "r": 246, "g": 222, "b": 179, "hex": "F6DEB3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Sun Salutation", "code": "SW9664", "r": 245, "g": 207, "b": 146, "hex": "F5CF92", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Sunny Side Up", "code": "SW9665", "r": 247, "g": 206, "b": 101, "hex": "F7CE65", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Barely Pear", "code": "SW9666", "r": 237, "g": 235, "b": 219, "hex": "EDEBDB", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Carambola", "code": "SW9667", "r": 239, "g": 235, "b": 209, "hex": "EFEBD1", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Wild Lime", "code": "SW9668", "r": 227, "g": 222, "b": 179, "hex": "E3DEB3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Glade Green", "code": "SW9669", "r": 164, "g": 165, "b": 113, "hex": "A4A571", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Olivetone", "code": "SW9670", "r": 78, "g": 99, "b": 66, "hex": "4E6342", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Serendipity", "code": "SW9671", "r": 233, "g": 237, "b": 231, "hex": "E9EDE7", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Wavecrest", "code": "SW9672", "r": 211, "g": 220, "b": 205, "hex": "D3DCCD", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Valleyview", "code": "SW9673", "r": 194, "g": 204, "b": 172, "hex": "C2CCAC", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Leaflet", "code": "SW9674", "r": 139, "g": 152, "b": 123, "hex": "8B987B", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Westhaven", "code": "SW9675", "r": 42, "g": 68, "b": 66, "hex": "2A4442", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Green Glimpse", "code": "SW9676", "r": 231, "g": 234, "b": 227, "hex": "E7EAE3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Kingston", "code": "SW9677", "r": 212, "g": 220, "b": 211, "hex": "D4DCD3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Holly Glen", "code": "SW9678", "r": 189, "g": 203, "b": 187, "hex": "BDCBBB", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Juniper", "code": "SW9679", "r": 101, "g": 131, "b": 117, "hex": "658375", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Night Watch", "code": "SW9680", "r": 48, "g": 54, "b": 54, "hex": "303636", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Rainsong", "code": "SW9681", "r": 221, "g": 230, "b": 229, "hex": "DDE6E5", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Silent Ripple", "code": "SW9682", "r": 215, "g": 225, "b": 229, "hex": "D7E1E5", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Lakeside", "code": "SW9683", "r": 173, "g": 184, "b": 192, "hex": "ADB8C0", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Azure Tide", "code": "SW9684", "r": 67, "g": 101, "b": 133, "hex": "436585", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "After the Storm", "code": "SW9685", "r": 42, "g": 48, "b": 55, "hex": "2A3037", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Opalescent", "code": "SW9686", "r": 223, "g": 224, "b": 227, "hex": "DFE0E3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Blue Iris", "code": "SW9687", "r": 220, "g": 222, "b": 224, "hex": "DCDEE0", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Modern Lavender", "code": "SW9688", "r": 168, "g": 170, "b": 179, "hex": "A8AAB3", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Ripe Berry", "code": "SW9689", "r": 92, "g": 86, "b": 102, "hex": "5C5666", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Mountain Fig", "code": "SW9690", "r": 56, "g": 60, "b": 73, "hex": "383C49", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Crystalline", "code": "SW9691", "r": 233, "g": 227, "b": 222, "hex": "E9E3DE", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Cotton Candy", "code": "SW9692", "r": 242, "g": 224, "b": 223, "hex": "F2E0DF", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Rose Pink", "code": "SW9693", "r": 238, "g": 202, "b": 205, "hex": "EECACD", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Wild Poppy", "code": "SW9694", "r": 184, "g": 91, "b": 87, "hex": "B85B57", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Beetroot", "code": "SW9695", "r": 131, "g": 51, "b": 55, "hex": "833337", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Pale Pink", "code": "SW9696", "r": 238, "g": 230, "b": 222, "hex": "EEE6DE", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Lotus Petal", "code": "SW9697", "r": 243, "g": 223, "b": 214, "hex": "F3DFD6", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Corallite", "code": "SW9698", "r": 240, "g": 223, "b": 205, "hex": "F0DFCD", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Stone Fruit", "code": "SW9699", "r": 242, "g": 162, "b": 140, "hex": "F2A28C", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}, {"brand": "Sherwin-Williams", "name": "Full Bloom", "code": "SW9700", "r": 209, "g": 111, "b": 101, "hex": "D16F65", "category": "Soft Shades + Statement Hues", "collection": "Classic + Collected"}];
+let stream=null,capturedImageData=null,displayScale=1,lastMatches=[],lastSample=null,currentSelected=null;
+let selection={x:0,y:0,w:0,h:0,dragging:false,startX:0,startY:0};
+function goTo(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='cameraScreen')startCamera();if(id==='sampleScreen')setupCanvas();}
+async function startCamera(){const video=document.getElementById('video');try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;}catch(e){console.warn(e);}}
+document.getElementById('captureBtn').addEventListener('click',()=>{const video=document.getElementById('video');const c=document.createElement('canvas');c.width=video.videoWidth||1280;c.height=video.videoHeight||720;c.getContext('2d').drawImage(video,0,0);capturedImageData=c.toDataURL('image/jpeg',.95);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}goTo('sampleScreen');});
+document.getElementById('fileBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{capturedImageData=ev.target.result;goTo('sampleScreen');};r.readAsDataURL(f);});
+function setupCanvas(){const canvas=document.getElementById('photoCanvas'),ctx=canvas.getContext('2d'),img=new Image();img.onload=()=>{const wrapper=document.getElementById('canvasWrapper');const scale=Math.min(wrapper.clientWidth/img.width,wrapper.clientHeight/img.height);canvas.width=img.width;canvas.height=img.height;canvas.style.width=(img.width*scale)+'px';canvas.style.height=(img.height*scale)+'px';displayScale=scale;ctx.drawImage(img,0,0);selection={x:0,y:0,w:0,h:0,dragging:false,startX:0,startY:0};document.getElementById('selectionBox').style.display='none';};img.src=capturedImageData;}
+function getPos(clientX,clientY){const r=document.getElementById('photoCanvas').getBoundingClientRect();return{x:(clientX-r.left)/displayScale,y:(clientY-r.top)/displayScale};}
+function updateBox(){const box=document.getElementById('selectionBox');const cr=document.getElementById('photoCanvas').getBoundingClientRect();const wr=document.getElementById('canvasWrapper').getBoundingClientRect();box.style.display='block';box.style.left=(cr.left-wr.left+selection.x*displayScale)+'px';box.style.top=(cr.top-wr.top+selection.y*displayScale)+'px';box.style.width=(selection.w*displayScale)+'px';box.style.height=(selection.h*displayScale)+'px';}
+const cw=document.getElementById('canvasWrapper');
+cw.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0],p=getPos(t.clientX,t.clientY);selection.startX=p.x;selection.startY=p.y;selection.dragging=true;},{passive:false});
+cw.addEventListener('touchmove',e=>{e.preventDefault();if(!selection.dragging)return;const t=e.touches[0],p=getPos(t.clientX,t.clientY);selection.x=Math.min(p.x,selection.startX);selection.y=Math.min(p.y,selection.startY);selection.w=Math.abs(p.x-selection.startX);selection.h=Math.abs(p.y-selection.startY);updateBox();},{passive:false});
+cw.addEventListener('touchend',()=>selection.dragging=false);cw.addEventListener('mousedown',e=>{const p=getPos(e.clientX,e.clientY);selection.startX=p.x;selection.startY=p.y;selection.dragging=true;});cw.addEventListener('mousemove',e=>{if(!selection.dragging)return;const p=getPos(e.clientX,e.clientY);selection.x=Math.min(p.x,selection.startX);selection.y=Math.min(p.y,selection.startY);selection.w=Math.abs(p.x-selection.startX);selection.h=Math.abs(p.y-selection.startY);updateBox();});cw.addEventListener('mouseup',()=>selection.dragging=false);
+function rgbToLab(r,g,b){const lin=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)};const rl=lin(r),gl=lin(g),bl=lin(b);let X=rl*0.4124564+gl*0.3575761+bl*0.1804375,Y=rl*0.2126729+gl*0.7151522+bl*0.072175,Z=rl*0.0193339+gl*0.119192+bl*0.9503041;X/=0.95047;Z/=1.08883;const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;return{L:116*f(Y)-16,a:500*(f(X)-f(Y)),b:200*(f(Y)-f(Z))};}
+function ciede2000(l1,l2){const avgLp=(l1.L+l2.L)/2;const c1=Math.sqrt(l1.a*l1.a+l1.b*l1.b),c2=Math.sqrt(l2.a*l2.a+l2.b*l2.b),avgC=(c1+c2)/2;const G=.5*(1-Math.sqrt(Math.pow(avgC,7)/(Math.pow(avgC,7)+Math.pow(25,7))));const a1p=(1+G)*l1.a,a2p=(1+G)*l2.a;const c1p=Math.sqrt(a1p*a1p+l1.b*l1.b),c2p=Math.sqrt(a2p*a2p+l2.b*l2.b),avgCp=(c1p+c2p)/2;const h1p=(Math.atan2(l1.b,a1p)*180/Math.PI+360)%360,h2p=(Math.atan2(l2.b,a2p)*180/Math.PI+360)%360;let deltahp=0;if(c1p*c2p===0)deltahp=0;else if(Math.abs(h2p-h1p)<=180)deltahp=h2p-h1p;else if(h2p<=h1p)deltahp=h2p-h1p+360;else deltahp=h2p-h1p-360;const deltaLp=l2.L-l1.L,deltaCp=c2p-c1p,deltaHp=2*Math.sqrt(c1p*c2p)*Math.sin((deltahp/2)*Math.PI/180);let avgHp=0;if(c1p*c2p===0)avgHp=h1p+h2p;else if(Math.abs(h1p-h2p)<=180)avgHp=(h1p+h2p)/2;else if(h1p+h2p<360)avgHp=(h1p+h2p+360)/2;else avgHp=(h1p+h2p-360)/2;const T=1-.17*Math.cos((avgHp-30)*Math.PI/180)+.24*Math.cos((2*avgHp)*Math.PI/180)+.32*Math.cos((3*avgHp+6)*Math.PI/180)-.20*Math.cos((4*avgHp-63)*Math.PI/180);const deltaRo=30*Math.exp(-Math.pow((avgHp-275)/25,2));const Rc=2*Math.sqrt(Math.pow(avgCp,7)/(Math.pow(avgCp,7)+Math.pow(25,7)));const Sl=1+(0.015*Math.pow(avgLp-50,2))/Math.sqrt(20+Math.pow(avgLp-50,2));const Sc=1+.045*avgCp;const Sh=1+.015*avgCp*T;const Rt=-Math.sin(2*deltaRo*Math.PI/180)*Rc;return Math.sqrt(Math.pow(deltaLp/Sl,2)+Math.pow(deltaCp/Sc,2)+Math.pow(deltaHp/Sh,2)+Rt*(deltaCp/Sc)*(deltaHp/Sh));}
+PAINTS.forEach(p=>{p.lab=rgbToLab(p.r,p.g,p.b);if(!p.hex)p.hex=[p.r,p.g,p.b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();});
+function analyzeSelection(){if(selection.w<10||selection.h<10){alert('Please drag a larger area to sample.');return;}document.getElementById('loading').classList.add('show');setTimeout(()=>{const canvas=document.getElementById('photoCanvas'),ctx=canvas.getContext('2d');const x=Math.max(0,Math.round(selection.x)),y=Math.max(0,Math.round(selection.y)),w=Math.min(canvas.width-x,Math.round(selection.w)),h=Math.min(canvas.height-y,Math.round(selection.h));const px=ctx.getImageData(x,y,w,h).data;let rs=0,gs=0,bs=0,n=0;for(let i=0;i<px.length;i+=4){const a=px[i+3];if(a===0)continue;rs+=px[i];gs+=px[i+1];bs+=px[i+2];n++;}const r=Math.round(rs/n),g=Math.round(gs/n),b=Math.round(bs/n);const lab=rgbToLab(r,g,b);lastSample={r,g,b,lab,hex:'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')};lastMatches=PAINTS.map(p=>({...p,de:ciede2000(lab,p.lab)})).sort((a,b)=>a.de-b.de).slice(0,12);showResults();document.getElementById('loading').classList.remove('show');},30);}
+function showResults(){const s=lastSample;document.getElementById('sampledSwatch').style.background=s.hex;document.getElementById('swatchLabel').textContent=s.hex.toUpperCase();document.getElementById('swatchRGB').textContent=`RGB: ${s.r}, ${s.g}, ${s.b}`;document.getElementById('swatchLAB').textContent=`LAB: ${s.lab.L.toFixed(1)}, ${s.lab.a.toFixed(1)}, ${s.lab.b.toFixed(1)}`;document.getElementById('swatchHint').textContent=`Showing closest matches from ${PAINTS.length} Sherwin-Williams colors`;const grid=document.getElementById('paintGrid');grid.innerHTML='';lastMatches.forEach(p=>{const card=document.createElement('div');card.className='paint-card';card.innerHTML=`<div class="paint-chip" style="background:#${p.hex}"></div><div class="paint-info"><div class="paint-brand">${p.brand}</div><div class="paint-name">${p.name}</div><div class="paint-code">${p.code}</div><div class="paint-meta">${p.collection||p.category||''}</div><div class="paint-de">ΔE00 ${p.de.toFixed(2)}</div></div>`;card.addEventListener('click',()=>selectPaint(card,p));grid.appendChild(card);});document.getElementById('selectionBanner').style.display='none';goTo('resultsScreen');}
+function selectPaint(card,p){document.querySelectorAll('.paint-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');currentSelected=p;const banner=document.getElementById('selectionBanner');banner.style.display='block';banner.style.background='#'+p.hex;const lum=(0.299*p.r+0.587*p.g+0.114*p.b)/255;banner.style.color=lum>.58?'#222':'#fff';banner.innerHTML=`<h3>${p.name} — ${p.code}</h3><p>Tap again below to explore nearby Sherwin-Williams colors.</p><div style="margin-top:10px"><button onclick="showNeighbors()" style="border:none;border-radius:10px;padding:10px 14px;font-weight:700">Show Nearby Colors</button></div>`;banner.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function showNeighbors(){if(!currentSelected)return;const same=PAINTS.map(p=>({...p,de:ciede2000(currentSelected.lab,p.lab)})).sort((a,b)=>a.de-b.de);const idx=same.findIndex(p=>p.code===currentSelected.code);const slice=same.slice(Math.max(0,idx-3),Math.min(same.length,idx+4));document.getElementById('selectedSwatch').style.background='#'+currentSelected.hex;document.getElementById('selectedLabel').textContent=currentSelected.name;document.getElementById('selectedCode').textContent=currentSelected.code;document.getElementById('selectedMeta').innerHTML=`<span class="pill">Sherwin-Williams</span> ${currentSelected.collection?(' · '+currentSelected.collection):''}`;const list=document.getElementById('neighborsList');list.innerHTML='';for(let i=0;i<slice.length;i+=3){const row=slice.slice(i,i+3);const wrap=document.createElement('div');wrap.className='neighbor-row';while(row.length<3)row.push(null);row.forEach((p,j)=>{const col=document.createElement('div');if(j===1)col.className='center-col';if(!p){col.innerHTML='';wrap.appendChild(col);return;}col.innerHTML=`<div class="mini-card"><div class="mini-chip" style="background:#${p.hex}"></div><div class="mini-info"><strong>${p.name}</strong>${p.code}<br><span style="color:var(--muted)">ΔE00 ${p.de.toFixed(2)}</span></div></div>`;wrap.appendChild(col);});list.appendChild(wrap);}goTo('neighborsScreen');}
 startCamera();
 </script>
 </body>
