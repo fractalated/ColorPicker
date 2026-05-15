@@ -14,9 +14,6 @@
       --line: #ddd6cb;
       --blue: #1f66d1;
       --shadow: 0 10px 32px rgba(88, 66, 42, 0.10);
-      --radius-xl: 26px;
-      --radius-lg: 20px;
-      --radius-md: 16px;
     }
     * { box-sizing: border-box; }
     body {
@@ -50,7 +47,7 @@
     }
     .title {
       margin: 0;
-      font-size: 21px;
+      font-size: 22px;
       font-weight: 800;
       color: var(--blue);
     }
@@ -72,43 +69,86 @@
       color: var(--muted);
       line-height: 1.35;
     }
-    .hero-card {
-      display: grid;
-      grid-template-columns: 132px 1fr;
-      gap: 16px;
-      align-items: center;
+    .camera-card, .hero-card, .sample-card {
       background: var(--surface);
       border-radius: 26px;
       box-shadow: var(--shadow);
       padding: 16px;
-      margin: 10px 0 28px;
+      margin: 10px 0 18px;
     }
-    .hero-swatch {
-      width: 132px;
-      height: 132px;
-      border-radius: 20px;
-      background: #a48262;
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8);
+    .preview-wrap {
+      position: relative;
+      aspect-ratio: 3 / 4;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #e8e2d9;
+      border: 1px solid var(--line);
     }
-    .hero-name {
-      margin: 0 0 8px;
-      font-size: 23px;
-      line-height: 1.08;
+    video, canvas, img.preview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #e8e2d9;
+    }
+    .sample-box {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 34%;
+      height: 22%;
+      transform: translate(-50%, -50%);
+      border: 3px solid rgba(255,255,255,0.96);
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.10), 0 10px 30px rgba(0,0,0,0.16);
+      background: rgba(255,255,255,0.08);
+      pointer-events: none;
+    }
+    .sample-hint {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-secondary { background: #edf3ff; color: #2b67c3; }
+    .btn-muted { background: #f3efe8; color: #594f44; }
+    .sample-card {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    .sample-swatch {
+      width: 110px;
+      height: 110px;
+      border-radius: 18px;
+      background: #b69370;
+      border: 1px solid var(--line);
+    }
+    .sample-title {
+      margin: 0 0 6px;
+      font-size: 18px;
       font-weight: 800;
     }
-    .hero-code {
-      margin: 0 0 12px;
-      font-size: 16px;
-      color: var(--muted);
-    }
-    .brand-pill {
-      display: inline-block;
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: #eef4ff;
-      color: #2d67c4;
+    .sample-rgb {
+      margin: 0;
       font-size: 14px;
-      font-weight: 700;
+      color: var(--muted);
+      line-height: 1.3;
     }
     .results-list {
       display: grid;
@@ -152,6 +192,40 @@
       font-size: 13px;
       font-weight: 700;
       cursor: pointer;
+    }
+    .hero-card {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin: 10px 0 28px;
+    }
+    .hero-swatch {
+      width: 132px;
+      height: 132px;
+      border-radius: 20px;
+      background: #a48262;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8);
+    }
+    .hero-name {
+      margin: 0 0 8px;
+      font-size: 23px;
+      line-height: 1.08;
+      font-weight: 800;
+    }
+    .hero-code {
+      margin: 0 0 12px;
+      font-size: 16px;
+      color: var(--muted);
+    }
+    .brand-pill {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #2d67c4;
+      font-size: 14px;
+      font-weight: 700;
     }
     .nearby-grid {
       display: grid;
@@ -212,6 +286,7 @@
       font-size: 14px;
       border: 1px solid var(--line);
     }
+    .file-input { display: none; }
     @media (max-width: 390px) {
       .screen { padding-inline: 12px; }
       .hero-card { grid-template-columns: 122px 1fr; }
@@ -220,22 +295,52 @@
       .nearby-swatch { height: 102px; }
       .nearby-name { font-size: 11px; }
       .nearby-code, .nearby-delta { font-size: 10px; }
+      .sample-card { grid-template-columns: 96px 1fr; }
+      .sample-swatch { width: 96px; height: 96px; }
     }
   </style>
 </head>
 <body>
-  <main class="screen" id="matchesScreen">
+  <main class="screen" id="mainScreen">
     <div class="topbar">
       <button class="back-btn hidden" aria-hidden="true">&#x2039;</button>
       <div>
         <h1 class="title">Behr Color Picker</h1>
-        <p class="subtitle">Tap a match to browse nearby colors in the palette</p>
+        <p class="subtitle">Take a photo or upload one, then sample the center area for Behr matches</p>
       </div>
     </div>
 
-    <h2 class="section-label">TOP MATCHES</h2>
-    <p class="section-copy">This screen is only a launcher so you can open the nearby palette view and verify the new layout.</p>
-    <div class="results-list" id="matchesList"></div>
+    <section class="camera-card">
+      <div class="preview-wrap">
+        <video id="video" autoplay playsinline class="hidden"></video>
+        <img id="previewImage" class="preview" alt="Selected preview" />
+        <canvas id="canvas" class="hidden"></canvas>
+        <div class="sample-box"></div>
+      </div>
+      <p class="sample-hint">The centered box is the sampled area used to find nearby Behr colors. [cite:13]</p>
+      <div class="actions">
+        <button class="btn btn-primary" id="startCameraBtn" type="button">Start camera</button>
+        <button class="btn btn-secondary" id="captureBtn" type="button">Capture</button>
+        <button class="btn btn-muted" id="uploadBtn" type="button">Upload photo</button>
+        <button class="btn btn-secondary" id="matchBtn" type="button">Find matches</button>
+      </div>
+      <input class="file-input" id="fileInput" type="file" accept="image/*" />
+    </section>
+
+    <section class="sample-card">
+      <div class="sample-swatch" id="sampleSwatch"></div>
+      <div>
+        <h2 class="sample-title">Sampled color</h2>
+        <p class="sample-rgb" id="sampleRgb">RGB 182, 147, 112</p>
+        <p class="sample-rgb" id="sampleHex">#B69370</p>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-label">BEST MATCHES</h2>
+      <p class="section-copy">Tap Nearby to open the secondary page and browse the colors before and after that Behr paint in the palette. [cite:7]</p>
+      <div class="results-list" id="matchesList"></div>
+    </section>
   </main>
 
   <main class="screen hidden" id="nearbyScreen">
@@ -266,6 +371,9 @@
   <script>
     const PALETTE_FILE = './behr-colors.json';
     let PALETTE = [];
+    let imageReady = false;
+    let stream = null;
+    let sampled = { r: 182, g: 147, b: 112 };
 
     function normalizeColor(raw, idx) {
       return {
@@ -287,29 +395,134 @@
         .replace(/'/g, '&#39;');
     }
 
+    function hexToRgb(hex) {
+      const h = String(hex).replace('#', '').trim();
+      const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+      const num = parseInt(full, 16);
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+
+    function colorDistance(a, b) {
+      return Math.sqrt(
+        Math.pow(a.r - b.r, 2) +
+        Math.pow(a.g - b.g, 2) +
+        Math.pow(a.b - b.b, 2)
+      );
+    }
+
+    function updateSampleUI() {
+      document.getElementById('sampleSwatch').style.background = rgbToHex(sampled.r, sampled.g, sampled.b);
+      document.getElementById('sampleRgb').textContent = `RGB ${sampled.r}, ${sampled.g}, ${sampled.b}`;
+      document.getElementById('sampleHex').textContent = rgbToHex(sampled.r, sampled.g, sampled.b);
+    }
+
+    function sampleCenterFromElement(sourceEl) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const w = sourceEl.videoWidth || sourceEl.naturalWidth || sourceEl.width;
+      const h = sourceEl.videoHeight || sourceEl.naturalHeight || sourceEl.height;
+      if (!w || !h) return;
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(sourceEl, 0, 0, w, h);
+      const boxW = Math.floor(w * 0.34);
+      const boxH = Math.floor(h * 0.22);
+      const x = Math.floor((w - boxW) / 2);
+      const y = Math.floor((h - boxH) / 2);
+      const data = ctx.getImageData(x, y, boxW, boxH).data;
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        r += data[i];
+        g += data[i + 1];
+        b += data[i + 2];
+        count++;
+      }
+      sampled = { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) };
+      updateSampleUI();
+    }
+
+    async function startCamera() {
+      const video = document.getElementById('video');
+      const image = document.getElementById('previewImage');
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        video.srcObject = stream;
+        video.classList.remove('hidden');
+        image.classList.add('hidden');
+        imageReady = true;
+      } catch (e) {
+        alert('Camera access was not available. You can still upload a photo.');
+      }
+    }
+
+    function captureFrame() {
+      const video = document.getElementById('video');
+      const image = document.getElementById('previewImage');
+      if (video.classList.contains('hidden')) return;
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      image.src = canvas.toDataURL('image/jpeg', 0.92);
+      image.classList.remove('hidden');
+      video.classList.add('hidden');
+      sampleCenterFromElement(image);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+    }
+
+    function handleUpload(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = document.getElementById('previewImage');
+        const video = document.getElementById('video');
+        image.onload = () => sampleCenterFromElement(image);
+        image.src = reader.result;
+        image.classList.remove('hidden');
+        video.classList.add('hidden');
+        imageReady = true;
+      };
+      reader.readAsDataURL(file);
+    }
+
     function formatDelta(value) {
       if (value == null || Number.isNaN(Number(value))) return '';
       return `ΔE00 ${Number(value).toFixed(2)}`;
     }
 
-    function byCodeOrLabel(color, code) {
-      return color.code === code || color.label === code || color.id === code;
-    }
-
-    function renderMatches() {
+    function renderMatches(matches) {
       const list = document.getElementById('matchesList');
-      const sample = PALETTE.slice(0, 8);
-      list.innerHTML = sample.map(color => `
+      list.innerHTML = matches.map(color => `
         <article class="result-card">
           <div class="result-swatch" style="background:${escapeHtml(color.hex)}"></div>
           <div>
             <h3 class="result-name">${escapeHtml(color.name)}</h3>
             <p class="result-code">${escapeHtml(color.code || color.label)}</p>
-            <p class="result-delta">${formatDelta(color.deltaE)}</p>
+            <p class="result-delta">${formatDelta(color.distance)}</p>
           </div>
           <button class="result-action" type="button" onclick="showNearby('${escapeHtml(color.code || color.label)}')">Nearby</button>
         </article>
       `).join('');
+    }
+
+    function findMatches() {
+      if (!PALETTE.length) return;
+      const ranked = PALETTE.map(color => {
+        const rgb = hexToRgb(color.hex);
+        return { ...color, distance: colorDistance(sampled, rgb) / 20 };
+      }).sort((a, b) => a.distance - b.distance).slice(0, 8);
+      renderMatches(ranked);
+    }
+
+    function byCodeOrLabel(color, code) {
+      return color.code === code || color.label === code || color.id === code;
     }
 
     function buildNearbyRows(selectedCode) {
@@ -324,17 +537,12 @@
 
     function renderNearbyGrid(before, after) {
       const grid = document.getElementById('nearbyGrid');
-      if (!before.length && !after.length) {
-        grid.innerHTML = '<div class="empty-note">No neighboring colors were found around this selection.</div>';
-        return;
-      }
       const beforeCards = before.map(color => `
         <button class="nearby-card" type="button" onclick="showNearby('${escapeHtml(color.code || color.label)}')">
           <div class="nearby-swatch" style="background:${escapeHtml(color.hex)}"></div>
           <div class="nearby-meta">
             <p class="nearby-name">${escapeHtml(color.name)}</p>
             <p class="nearby-code">${escapeHtml(color.code || color.label)}</p>
-            <p class="nearby-delta">${formatDelta(color.deltaE)}</p>
           </div>
         </button>
       `).join('');
@@ -344,7 +552,6 @@
           <div class="nearby-meta">
             <p class="nearby-name">${escapeHtml(color.name)}</p>
             <p class="nearby-code">${escapeHtml(color.code || color.label)}</p>
-            <p class="nearby-delta">${formatDelta(color.deltaE)}</p>
           </div>
         </button>
       `).join('');
@@ -363,13 +570,13 @@
       document.getElementById('selectedName').textContent = selected.name;
       document.getElementById('selectedCode').textContent = selected.code || selected.label || '';
       renderNearbyGrid(before, after);
-      document.getElementById('matchesScreen').classList.add('hidden');
+      document.getElementById('mainScreen').classList.add('hidden');
       document.getElementById('nearbyScreen').classList.remove('hidden');
     }
 
-    function showMatches() {
+    function showMain() {
       document.getElementById('nearbyScreen').classList.add('hidden');
-      document.getElementById('matchesScreen').classList.remove('hidden');
+      document.getElementById('mainScreen').classList.remove('hidden');
     }
 
     async function init() {
@@ -377,16 +584,28 @@
         const res = await fetch(PALETTE_FILE);
         const raw = await res.json();
         PALETTE = raw.map(normalizeColor);
-        renderMatches();
-        const params = new URLSearchParams(window.location.search);
-        const selected = params.get('nearby') || params.get('code') || params.get('label');
-        if (selected) showNearby(selected);
+        const fallback = PALETTE.find(c => (c.code || c.label) === 'S220-6') || PALETTE[0];
+        if (fallback) {
+          document.getElementById('previewImage').src = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800"><rect width="600" height="800" fill="${fallback.hex}"/></svg>`);
+          sampled = hexToRgb(fallback.hex);
+          updateSampleUI();
+          findMatches();
+        }
       } catch (e) {
         document.getElementById('matchesList').innerHTML = '<div class="empty-note">Unable to load behr-colors.json. Keep this HTML in the same folder as your Behr JSON file.</div>';
       }
     }
 
-    document.getElementById('nearbyBack').addEventListener('click', showMatches);
+    document.getElementById('startCameraBtn').addEventListener('click', startCamera);
+    document.getElementById('captureBtn').addEventListener('click', captureFrame);
+    document.getElementById('uploadBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleUpload(e.target.files[0]);
+    });
+    document.getElementById('matchBtn').addEventListener('click', () => {
+      if (imageReady || document.getElementById('previewImage').src) findMatches();
+    });
+    document.getElementById('nearbyBack').addEventListener('click', showMain);
     window.showNearby = showNearby;
     init();
   </script>
