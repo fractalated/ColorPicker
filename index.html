@@ -1,48 +1,300 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>behr-color-picker</title>
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="BehrPicker">
-<style>
-:root{--bg:#f7f6f2;--surface:#fff;--text:#28251d;--muted:#6f6d68;--primary:#0057b8;--border:#d8d5ce;--radius:14px;--shadow:0 8px 24px rgba(0,0,0,.08)}
-*{box-sizing:border-box;margin:0;padding:0} html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)} body{overflow:hidden}
-.screen{display:none;flex-direction:column;height:100dvh}.screen.active{display:flex}.header{padding:16px 18px 12px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}.header h1{font-size:18px;color:var(--primary)}.header p{font-size:12px;color:var(--muted)}.back-btn{border:none;background:none;font-size:24px;color:var(--primary);padding:4px 8px 4px 0}
-#cameraWrapper{position:relative;flex:1;background:#000;overflow:hidden}#video{width:100%;height:100%;object-fit:cover}#captureBtn{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:var(--primary);color:#fff;font-size:28px;box-shadow:var(--shadow)}#fileBtn{position:absolute;bottom:40px;right:20px;background:rgba(0,0,0,.45);color:#fff;border:2px solid #fff;border-radius:10px;padding:8px 12px;font-size:12px}.cam-hint{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:6px 12px;border-radius:999px;font-size:12px}
-#sampleScreen{background:#111}#canvasWrapper{position:relative;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:none}#photoCanvas{max-width:100%;max-height:100%;display:block}#selectionBox{position:absolute;border:2px dashed #fff;background:rgba(255,255,255,.12);display:none;pointer-events:none}.sample-hint{font-size:12px;color:#cfcfcf;text-align:center;padding:10px 18px}#sampleActions{display:flex;gap:12px;padding:16px 18px;background:#1a1a1a}.btn{flex:1;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:600}.btn-primary{background:var(--primary);color:#fff}.btn-ghost{background:rgba(255,255,255,.12);color:#fff}
-#resultsScreen,#neighborsScreen{overflow-y:auto}.results-body{padding:18px;display:flex;flex-direction:column;gap:18px}.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}.swatch-row{display:flex;gap:14px;align-items:center}#sampledSwatch,#selectedSwatch{width:84px;height:84px;border-radius:12px;border:1px solid var(--border);flex-shrink:0}.swatch-vals{font-size:13px;line-height:1.7;color:var(--muted)}.swatch-vals strong{font-size:15px;color:var(--text)}.section-title{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}.paint-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.paint-card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;border:2px solid transparent}.paint-card.selected{border-color:var(--primary)}.paint-chip{height:78px}.paint-info{padding:10px 12px}.paint-brand{font-size:10px;color:var(--muted);text-transform:uppercase}.paint-name{font-size:14px;font-weight:700}.paint-code,.paint-de{font-size:12px;color:var(--muted)}.paint-de{color:var(--primary);margin-top:2px}
-#selectionBanner{display:none;padding:16px;border-radius:var(--radius)}#selectionBanner h3{font-size:15px;margin-bottom:4px}#selectionBanner p{font-size:13px;opacity:.92}.neighbor-strip{display:flex;gap:12px;align-items:stretch;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}.neighbor-col{flex:0 0 120px;scroll-snap-align:center}.mini-card{background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--border);width:120px}.mini-chip{height:88px}.mini-info{padding:10px;font-size:11px;line-height:1.35}.mini-info strong{display:block;font-size:12px;line-height:1.25;margin-bottom:2px;word-break:break-word}.mini-code,.mini-de{color:var(--muted);word-break:break-word}.center-col .mini-card{border:2px solid var(--primary)}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef4ff;color:var(--primary);font-size:11px;font-weight:700}
-#loading{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);align-items:center;justify-content:center;z-index:20;flex-direction:column;gap:14px}#loading.show{display:flex}.spinner{width:40px;height:40px;border-radius:50%;border:4px solid rgba(255,255,255,.28);border-top-color:#fff;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Nearby Behr Colors</title>
+  <style>
+    :root {
+      --bg: #f7f3ee;
+      --surface: #ffffff;
+      --text: #1f1f1f;
+      --muted: #6c6c6c;
+      --line: #ddd6cc;
+      --accent: #1e66d0;
+      --shadow: 0 10px 28px rgba(62, 39, 21, 0.10);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(#f8f6f1, #f7f3ee 35%, #f5f1eb);
+      color: var(--text);
+    }
+    .app {
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 18px 16px 40px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 18px;
+    }
+    .back {
+      border: 0;
+      background: transparent;
+      font-size: 34px;
+      line-height: 1;
+      color: #1d5fbf;
+      cursor: pointer;
+      padding: 0;
+    }
+    .title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1d5fbf;
+      margin: 0;
+    }
+    .subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 2px 0 0;
+    }
+    .hero {
+      background: var(--surface);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      gap: 16px;
+      align-items: center;
+      margin: 10px 0 28px;
+    }
+    .hero-swatch {
+      width: 132px;
+      height: 132px;
+      border-radius: 20px;
+      background: #9a7b5d;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.7);
+    }
+    .hero-name {
+      font-size: 22px;
+      line-height: 1.1;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .hero-code {
+      font-size: 16px;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: #2965c2;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    .section-label {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      font-weight: 800;
+      color: #6a6a6a;
+      margin: 0 0 10px;
+    }
+    .section-copy {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .nearby-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .nearby-card {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.06);
+      padding: 0;
+      text-align: left;
+      cursor: pointer;
+    }
+    .nearby-swatch {
+      height: 110px;
+      width: 100%;
+      background: #9a7b5d;
+    }
+    .nearby-meta {
+      padding: 10px 10px 12px;
+      min-height: 86px;
+    }
+    .nearby-name {
+      font-size: 12px;
+      line-height: 1.1;
+      font-weight: 800;
+      color: #202020;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 40px;
+    }
+    .nearby-code, .nearby-delta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #696969;
+      line-height: 1.15;
+    }
+    .row-label {
+      grid-column: 1 / -1;
+      font-size: 12px;
+      font-weight: 700;
+      color: #7a746c;
+      margin: 2px 0 -2px;
+    }
+    @media (max-width: 390px) {
+      .app { padding-inline: 12px; }
+      .nearby-grid { gap: 8px; }
+      .nearby-swatch { height: 102px; }
+      .nearby-meta { padding: 9px 8px 10px; }
+      .nearby-name { font-size: 11px; }
+      .nearby-code, .nearby-delta { font-size: 10.5px; }
+      .hero { grid-template-columns: 122px 1fr; }
+      .hero-swatch { width: 122px; height: 122px; }
+    }
+  </style>
 </head>
 <body>
-<div id="loading"><div class="spinner"></div><p style="color:#fff">Processing…</p></div>
-<div class="screen active" id="cameraScreen"><div class="header"><div><h1>Behr Color Picker</h1><p>Capture a color, then compare against the full Behr palette</p></div></div><div id="cameraWrapper"><video id="video" autoplay playsinline muted></video><div class="cam-hint">Use even lighting for best results</div><button id="captureBtn">📷</button><button id="fileBtn">📁 Photo</button></div><input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none"></div>
-<div class="screen" id="sampleScreen"><div class="header" style="background:#1a1a1a;border-color:#333"><button class="back-btn" onclick="goTo('cameraScreen')">‹</button><div><h1 style="color:#fff">Select Area</h1><p style="color:#999">Drag a box over the color area to average it</p></div></div><div id="canvasWrapper"><canvas id="photoCanvas"></canvas><div id="selectionBox"></div></div><p class="sample-hint">Pick a flat, evenly lit area. Bigger selections usually give better averages.</p><div id="sampleActions"><button class="btn btn-ghost" onclick="goTo('cameraScreen')">Retake</button><button class="btn btn-primary" onclick="analyzeSelection()">Sample Color →</button></div></div>
-<div class="screen" id="resultsScreen"><div class="header"><button class="back-btn" onclick="goTo('sampleScreen')">‹</button><div><h1>Nearest Behr Matches</h1><p>Tap one to see nearby Behr colors</p></div></div><div class="results-body"><div class="card swatch-row"><div id="sampledSwatch"></div><div class="swatch-vals"><strong id="swatchLabel">Sampled Color</strong><br><span id="swatchRGB"></span><br><span id="swatchLAB"></span><br><span id="swatchHint"></span></div></div><div class="section-title">Best Behr matches</div><div class="paint-grid" id="paintGrid"></div><div id="selectionBanner"></div></div></div>
-<div class="screen" id="neighborsScreen"><div class="header"><button class="back-btn" onclick="goTo('resultsScreen')">‹</button><div><h1>Nearby Behr Colors</h1><p>Colors closest to your selected Behr paint</p></div></div><div class="results-body"><div class="card swatch-row"><div id="selectedSwatch"></div><div class="swatch-vals"><strong id="selectedLabel"></strong><br><span id="selectedCode"></span><br><span id="selectedMeta"></span></div></div><div class="section-title">Around your selected color</div><p style="font-size:12px;color:var(--muted);margin-top:-8px">Tap any nearby color to recenter the strip and keep browsing.</p><div id="neighborsList" style="display:flex;flex-direction:column;gap:12px"></div></div></div>
-<script>
-let PAINTS=[];let stream=null,capturedImageData=null,displayScale=1,lastMatches=[],lastSample=null,currentSelected=null;let selection={x:0,y:0,w:0,h:0,dragging:false,startX:0,startY:0};
-function hexToRgb(hex){const h=hex.replace('#','');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)}}
-function rgbToLab(r,g,b){const lin=c=>{c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)};const rl=lin(r),gl=lin(g),bl=lin(b);let X=rl*0.4124564+gl*0.3575761+bl*0.1804375,Y=rl*0.2126729+gl*0.7151522+bl*0.072175,Z=rl*0.0193339+gl*0.119192+bl*0.9503041;X/=0.95047;Z/=1.08883;const f=t=>t>0.008856?Math.cbrt(t):7.787*t+16/116;return{L:116*f(Y)-16,a:500*(f(X)-f(Y)),b:200*(f(Y)-f(Z))}}
-function ciede2000(l1,l2){const avgLp=(l1.L+l2.L)/2;const c1=Math.sqrt(l1.a*l1.a+l1.b*l1.b),c2=Math.sqrt(l2.a*l2.a+l2.b*l2.b),avgC=(c1+c2)/2;const G=.5*(1-Math.sqrt(Math.pow(avgC,7)/(Math.pow(avgC,7)+Math.pow(25,7))));const a1p=(1+G)*l1.a,a2p=(1+G)*l2.a;const c1p=Math.sqrt(a1p*a1p+l1.b*l1.b),c2p=Math.sqrt(a2p*a2p+l2.b*l2.b),avgCp=(c1p+c2p)/2;const h1p=(Math.atan2(l1.b,a1p)*180/Math.PI+360)%360,h2p=(Math.atan2(l2.b,a2p)*180/Math.PI+360)%360;let deltahp=0;if(c1p*c2p===0)deltahp=0;else if(Math.abs(h2p-h1p)<=180)deltahp=h2p-h1p;else if(h2p<=h1p)deltahp=h2p-h1p+360;else deltahp=h2p-h1p-360;const deltaLp=l2.L-l1.L,deltaCp=c2p-c1p,deltaHp=2*Math.sqrt(c1p*c2p)*Math.sin((deltahp/2)*Math.PI/180);let avgHp=0;if(c1p*c2p===0)avgHp=h1p+h2p;else if(Math.abs(h1p-h2p)<=180)avgHp=(h1p+h2p)/2;else if(h1p+h2p<360)avgHp=(h1p+h2p+360)/2;else avgHp=(h1p+h2p-360)/2;const T=1-.17*Math.cos((avgHp-30)*Math.PI/180)+.24*Math.cos((2*avgHp)*Math.PI/180)+.32*Math.cos((3*avgHp+6)*Math.PI/180)-.20*Math.cos((4*avgHp-63)*Math.PI/180);const deltaRo=30*Math.exp(-Math.pow((avgHp-275)/25,2));const Rc=2*Math.sqrt(Math.pow(avgCp,7)/(Math.pow(avgCp,7)+Math.pow(25,7)));const Sl=1+(0.015*Math.pow(avgLp-50,2))/Math.sqrt(20+Math.pow(avgLp-50,2));const Sc=1+.045*avgCp;const Sh=1+.015*avgCp*T;const Rt=-Math.sin(2*deltaRo*Math.PI/180)*Rc;return Math.sqrt(Math.pow(deltaLp/Sl,2)+Math.pow(deltaCp/Sc,2)+Math.pow(deltaHp/Sh,2)+Rt*(deltaCp/Sc)*(deltaHp/Sh))}
-async function loadPalette(){const res=await fetch('./behr-colors.json');PAINTS=await res.json();PAINTS=PAINTS.map(p=>{const rgb=hexToRgb(p.hex);return {...p,...rgb,lab:rgbToLab(rgb.r,rgb.g,rgb.b)}});document.getElementById('swatchHint').textContent=`Palette loaded: ${PAINTS.length} Behr colors`;}
-function goTo(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='cameraScreen')startCamera();if(id==='sampleScreen')setupCanvas()}
-async function startCamera(){const video=document.getElementById('video');try{if(stream)stream.getTracks().forEach(t=>t.stop());stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream}catch(e){console.warn(e)}}
-document.getElementById('captureBtn').addEventListener('click',()=>{const video=document.getElementById('video');const c=document.createElement('canvas');c.width=video.videoWidth||1280;c.height=video.videoHeight||720;c.getContext('2d').drawImage(video,0,0);capturedImageData=c.toDataURL('image/jpeg',.95);if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}goTo('sampleScreen')});
-document.getElementById('fileBtn').addEventListener('click',()=>document.getElementById('fileInput').click());document.getElementById('fileInput').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{capturedImageData=ev.target.result;goTo('sampleScreen')};r.readAsDataURL(f)});
-function setupCanvas(){const canvas=document.getElementById('photoCanvas'),ctx=canvas.getContext('2d'),img=new Image();img.onload=()=>{const wrapper=document.getElementById('canvasWrapper');const scale=Math.min(wrapper.clientWidth/img.width,wrapper.clientHeight/img.height);canvas.width=img.width;canvas.height=img.height;canvas.style.width=(img.width*scale)+'px';canvas.style.height=(img.height*scale)+'px';displayScale=scale;ctx.drawImage(img,0,0);selection={x:0,y:0,w:0,h:0,dragging:false,startX:0,startY:0};document.getElementById('selectionBox').style.display='none'};img.src=capturedImageData}
-function getPos(clientX,clientY){const r=document.getElementById('photoCanvas').getBoundingClientRect();return{x:(clientX-r.left)/displayScale,y:(clientY-r.top)/displayScale}}
-function updateBox(){const box=document.getElementById('selectionBox'),cr=document.getElementById('photoCanvas').getBoundingClientRect(),wr=document.getElementById('canvasWrapper').getBoundingClientRect();box.style.display='block';box.style.left=(cr.left-wr.left+selection.x*displayScale)+'px';box.style.top=(cr.top-wr.top+selection.y*displayScale)+'px';box.style.width=(selection.w*displayScale)+'px';box.style.height=(selection.h*displayScale)+'px'}
-const cw=document.getElementById('canvasWrapper');cw.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0],p=getPos(t.clientX,t.clientY);selection.startX=p.x;selection.startY=p.y;selection.dragging=true},{passive:false});cw.addEventListener('touchmove',e=>{e.preventDefault();if(!selection.dragging)return;const t=e.touches[0],p=getPos(t.clientX,t.clientY);selection.x=Math.min(p.x,selection.startX);selection.y=Math.min(p.y,selection.startY);selection.w=Math.abs(p.x-selection.startX);selection.h=Math.abs(p.y-selection.startY);updateBox()},{passive:false});cw.addEventListener('touchend',()=>selection.dragging=false);cw.addEventListener('mousedown',e=>{const p=getPos(e.clientX,e.clientY);selection.startX=p.x;selection.startY=p.y;selection.dragging=true});cw.addEventListener('mousemove',e=>{if(!selection.dragging)return;const p=getPos(e.clientX,e.clientY);selection.x=Math.min(p.x,selection.startX);selection.y=Math.min(p.y,selection.startY);selection.w=Math.abs(p.x-selection.startX);selection.h=Math.abs(p.y-selection.startY);updateBox()});cw.addEventListener('mouseup',()=>selection.dragging=false);
-function analyzeSelection(){if(!PAINTS.length){alert('Palette not loaded yet.');return}if(selection.w<10||selection.h<10){alert('Please drag a larger area to sample.');return}document.getElementById('loading').classList.add('show');setTimeout(()=>{const canvas=document.getElementById('photoCanvas'),ctx=canvas.getContext('2d');const x=Math.max(0,Math.round(selection.x)),y=Math.max(0,Math.round(selection.y)),w=Math.min(canvas.width-x,Math.round(selection.w)),h=Math.min(canvas.height-y,Math.round(selection.h));const px=ctx.getImageData(x,y,w,h).data;let rs=0,gs=0,bs=0,n=0;for(let i=0;i<px.length;i+=4){const a=px[i+3];if(a===0)continue;rs+=px[i];gs+=px[i+1];bs+=px[i+2];n++}const r=Math.round(rs/n),g=Math.round(gs/n),b=Math.round(bs/n);const lab=rgbToLab(r,g,b);lastSample={r,g,b,lab,hex:'#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('')};lastMatches=PAINTS.map(p=>({...p,de:ciede2000(lab,p.lab)})).sort((a,b)=>a.de-b.de).slice(0,12);showResults();document.getElementById('loading').classList.remove('show')},30)}
-function showResults(){const s=lastSample;document.getElementById('sampledSwatch').style.background=s.hex;document.getElementById('swatchLabel').textContent=s.hex.toUpperCase();document.getElementById('swatchRGB').textContent=`RGB: ${s.r}, ${s.g}, ${s.b}`;document.getElementById('swatchLAB').textContent=`LAB: ${s.lab.L.toFixed(1)}, ${s.lab.a.toFixed(1)}, ${s.lab.b.toFixed(1)}`;document.getElementById('swatchHint').textContent=`Showing closest matches from ${PAINTS.length} Behr colors`;const grid=document.getElementById('paintGrid');grid.innerHTML='';lastMatches.forEach(p=>{const card=document.createElement('div');card.className='paint-card';card.innerHTML=`<div class="paint-chip" style="background:${p.hex}"></div><div class="paint-info"><div class="paint-brand">${p.brand}</div><div class="paint-name">${p.name}</div><div class="paint-code">${p.label}</div><div class="paint-de">ΔE00 ${p.de.toFixed(2)}</div></div>`;card.addEventListener('click',()=>selectPaint(card,p));grid.appendChild(card)});document.getElementById('selectionBanner').style.display='none';goTo('resultsScreen')}
-function selectPaint(card,p){document.querySelectorAll('.paint-card').forEach(c=>c.classList.remove('selected'));card.classList.add('selected');currentSelected=p;const banner=document.getElementById('selectionBanner');banner.style.display='block';banner.style.background=p.hex;const lum=(0.299*p.r+0.587*p.g+0.114*p.b)/255;banner.style.color=lum>.58?'#222':'#fff';banner.innerHTML=`<h3>${p.name} — ${p.label}</h3><p>Tap below to explore nearby Behr colors.</p><div style="margin-top:10px"><button onclick="showNeighbors()" style="border:none;border-radius:10px;padding:10px 14px;font-weight:700">Show Nearby Colors</button></div>`;banner.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function showNeighbors(){if(!currentSelected)return;const same=PAINTS.map(p=>({...p,de:ciede2000(currentSelected.lab,p.lab)})).sort((a,b)=>a.de-b.de);const idx=same.findIndex(p=>p.label===currentSelected.label);const desired=[idx-2,idx-1,idx,idx+1,idx+2].filter(i=>i>=0&&i<same.length);const slice=desired.map(i=>same[i]);document.getElementById('selectedSwatch').style.background=currentSelected.hex;document.getElementById('selectedLabel').textContent=currentSelected.name;document.getElementById('selectedCode').textContent=currentSelected.label;document.getElementById('selectedMeta').innerHTML=`<span class="pill">Behr</span>`;const list=document.getElementById('neighborsList');list.innerHTML='';const wrap=document.createElement('div');wrap.className='neighbor-strip';slice.forEach((p)=>{const col=document.createElement('div');col.className='neighbor-col'+(p.label===currentSelected.label?' center-col':'');col.innerHTML=`<div class="mini-card"><div class="mini-chip" style="background:${p.hex}"></div><div class="mini-info"><strong>${p.name}</strong><div class="mini-code">${p.label}</div><div class="mini-de">ΔE00 ${p.de.toFixed(2)}</div></div></div>`;col.style.cursor='pointer';col.addEventListener('click',()=>{currentSelected=p;showNeighbors()});wrap.appendChild(col)});list.appendChild(wrap);goTo('neighborsScreen');const center=wrap.querySelector('.center-col');if(center){const left=center.offsetLeft-(wrap.clientWidth-center.clientWidth)/2;wrap.scrollLeft=Math.max(0,left)}}
-loadPalette().catch(err=>{alert('Could not load behr-colors.json. Make sure both files are in the same GitHub folder.');console.error(err)});startCamera();
-</script>
+  <main class="app">
+    <div class="topbar">
+      <button class="back" aria-label="Go back">&#x2039;</button>
+      <div>
+        <h1 class="title">Nearby Behr Colors</h1>
+        <p class="subtitle">Colors closest to your selected Behr paint</p>
+      </div>
+    </div>
+
+    <section class="hero" id="selectedCard">
+      <div class="hero-swatch" id="heroSwatch"></div>
+      <div>
+        <h2 class="hero-name" id="heroName">Selected Color</h2>
+        <p class="hero-code" id="heroCode">Code</p>
+        <span class="badge">Behr</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-label">AROUND YOUR SELECTED COLOR</h2>
+      <p class="section-copy">Top row shows the 3 colors before it in the palette. Bottom row shows the 3 colors after it.</p>
+      <div id="nearbyColors" class="nearby-grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const PALETTE_FILE = './behr-colors.json';
+
+    function getSelectedCode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('code') || params.get('label') || params.get('selected') || 'S220-6';
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function normalizeColor(raw) {
+      return {
+        name: raw.name || raw.color || raw.title || 'Unnamed Color',
+        code: raw.code || raw.label || raw.id || '',
+        label: raw.label || raw.code || raw.id || '',
+        hex: raw.hex || raw.value || '#cccccc',
+        deltaE: raw.deltaE ?? raw.delta ?? null
+      };
+    }
+
+    function formatDelta(value) {
+      if (value == null || Number.isNaN(Number(value))) return '';
+      return `ΔE00 ${Number(value).toFixed(2)}`;
+    }
+
+    function getPaletteNeighbors(allColors, selectedCode) {
+      const selectedIndex = allColors.findIndex(c => c.code === selectedCode || c.label === selectedCode);
+      if (selectedIndex === -1) return { before: [], after: [], selected: allColors[0] || null };
+      return {
+        before: allColors.slice(Math.max(0, selectedIndex - 3), selectedIndex),
+        after: allColors.slice(selectedIndex + 1, selectedIndex + 4),
+        selected: allColors[selectedIndex]
+      };
+    }
+
+    function renderSelected(color) {
+      document.getElementById('heroSwatch').style.background = color.hex;
+      document.getElementById('heroName').textContent = color.name;
+      document.getElementById('heroCode').textContent = color.code || color.label || '';
+    }
+
+    function renderNearby(before, after) {
+      const wrap = document.getElementById('nearbyColors');
+      const beforeHtml = before.map(color => `
+        <button class="nearby-card" type="button" onclick="openNearbyColor('${escapeHtml(color.code || color.label)}')">
+          <div class="nearby-swatch" style="background:${escapeHtml(color.hex)}"></div>
+          <div class="nearby-meta">
+            <div class="nearby-name">${escapeHtml(color.name)}</div>
+            <div class="nearby-code">${escapeHtml(color.code || color.label)}</div>
+            <div class="nearby-delta">${formatDelta(color.deltaE)}</div>
+          </div>
+        </button>
+      `).join('');
+      const afterHtml = after.map(color => `
+        <button class="nearby-card" type="button" onclick="openNearbyColor('${escapeHtml(color.code || color.label)}')">
+          <div class="nearby-swatch" style="background:${escapeHtml(color.hex)}"></div>
+          <div class="nearby-meta">
+            <div class="nearby-name">${escapeHtml(color.name)}</div>
+            <div class="nearby-code">${escapeHtml(color.code || color.label)}</div>
+            <div class="nearby-delta">${formatDelta(color.deltaE)}</div>
+          </div>
+        </button>
+      `).join('');
+
+      wrap.innerHTML = `
+        <div class="row-label">Before selected color</div>
+        ${beforeHtml}
+        <div class="row-label">After selected color</div>
+        ${afterHtml}
+      `;
+    }
+
+    function openNearbyColor(code) {
+      const params = new URLSearchParams(window.location.search);
+      params.set('code', code);
+      window.location.search = params.toString();
+    }
+
+    async function init() {
+      try {
+        const response = await fetch(PALETTE_FILE);
+        const raw = await response.json();
+        const allColors = raw.map(normalizeColor);
+        const selectedCode = getSelectedCode();
+        const { before, after, selected } = getPaletteNeighbors(allColors, selectedCode);
+        if (!selected) throw new Error('No colors found in palette file.');
+        renderSelected(selected);
+        renderNearby(before, after);
+      } catch (error) {
+        document.getElementById('nearbyColors').innerHTML = '<p class="section-copy">Unable to load the Behr palette file. Keep this HTML in the same folder as behr-colors.json.</p>';
+      }
+    }
+
+    init();
+  </script>
 </body>
 </html>
